@@ -1,5 +1,5 @@
 import { GOLD_CHECKS } from "@/lib/eval-set";
-import { goldFound, reportFromRows } from "@/lib/eval-score";
+import { goldFound, goldSiteCited, reportFromRows } from "@/lib/eval-score";
 import type { EvalReport } from "@/lib/eval-score";
 import { resolveMode } from "@/lib/env";
 import { collectPipeline } from "@/lib/pipeline";
@@ -24,6 +24,7 @@ export async function scoreEval(deps: PipelineDeps): Promise<EvalReport> {
     task: check.task,
     label: check.label,
     found: goldFound(check, quotesByPrompt.get(check.prompt) ?? []),
+    sameSite: goldSiteCited(check, quotesByPrompt.get(check.prompt) ?? []),
   }));
 
   return reportFromRows(mode, rows);

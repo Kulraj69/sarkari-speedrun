@@ -7,6 +7,7 @@ export interface EvalRow {
   task: string;
   label: string;
   found: boolean;
+  sameSite?: boolean;
 }
 
 export interface EvalReport {
@@ -20,11 +21,13 @@ export interface EvalReport {
 }
 
 export function formatAccuracyTable(report: EvalReport): string {
-  const header = "task".padEnd(28) + "check".padEnd(28) + "found";
+  const header = "task".padEnd(30) + "check".padEnd(28) + "exact line".padEnd(12) + "same site";
   const lines = report.rows.map((row) => {
     const found = row.found ? "yes" : "no";
-    return row.task.padEnd(28) + row.label.padEnd(28) + found;
+    const site = row.sameSite === undefined ? "-" : row.sameSite ? "yes" : "no";
+    return row.task.padEnd(30) + row.label.padEnd(28) + found.padEnd(12) + site;
   });
+  const sameSite = report.rows.filter((row) => row.sameSite).length;
   return [
     report.heading,
     `Mode: ${report.mode}`,
@@ -33,7 +36,7 @@ export function formatAccuracyTable(report: EvalReport): string {
     header,
     ...lines,
     "",
-    `Matched ${report.agreement} of ${report.total}.`,
+    `Exact gold line: ${report.agreement} of ${report.total}. Cited the same official site: ${sameSite} of ${report.total}.`,
   ].join("\n");
 }
 
@@ -53,4 +56,18 @@ export function reportFromRows(mode: RunMode, rows: EvalRow[]): EvalReport {
 
 export function goldFound(check: GoldCheck, quotes: readonly { quote: string; url: string }[]): boolean {
   return quotes.some((item) => item.url === check.url && item.quote.includes(check.quote));
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+/** Looser check: the map cited the same official site the gold line comes from. */
+export function goldSiteCited(check: GoldCheck, quotes: readonly { quote: string; url: string }[]): boolean {
+  const host = hostOf(check.url);
+  return quotes.some((item) => hostOf(item.url) === host);
 }

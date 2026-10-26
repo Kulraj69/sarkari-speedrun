@@ -1,4 +1,5 @@
 import {
+  focusDomains,
   CHECK_MAX_TOKENS,
   CHECK_TEMPERATURE,
   CHECK_TIMEOUT_MS,
@@ -332,6 +333,7 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
         query: `${task} ${city} ${question.text}`.trim(),
         maxResults: deps.env.tavilyMaxResults,
         now: deps.now,
+        includeDomains: focusDomains(task, city),
       });
     } catch (error) {
       if (isAuth(error)) throw error;

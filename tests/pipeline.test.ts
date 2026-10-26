@@ -159,7 +159,7 @@ describe("live pipeline", () => {
         });
       }
       if (url.includes("tavily.com")) {
-        expect(body.include_domains).toEqual(expect.arrayContaining(["parivahan.gov.in", "gov.in"]));
+        expect(body.include_domains).toEqual(expect.arrayContaining(["parivahan.gov.in", "sarathi.parivahan.gov.in"]));
         expect(body.time_range).toBe(TAVILY_TIME_RANGE);
         return jsonResponse({
           results: [

@@ -33,7 +33,7 @@ export const MAX_QUESTIONS = 4;
 export const MAX_ITEMS = 8;
 export const MIN_QUOTE_CHARS = 12;
 export const SNIPPET_CHARS = 480;
-export const EXTRACT_SNIPPET_CHARS = 700;
+export const EXTRACT_SNIPPET_CHARS = 1_600;
 export const CHECKLIST_MAX_CHARS = 1_200;
 
 export const TAVILY_MAX_RESULTS = 4;
@@ -49,7 +49,7 @@ export const NANO_REWRITE_TEMPERATURE = 0.2;
 export const CHECK_TEMPERATURE = 0.1;
 export const NANO_PLAN_MAX_TOKENS = 800;
 export const REWRITE_MAX_TOKENS = 180;
-export const CHECK_MAX_TOKENS = 1_800;
+export const CHECK_MAX_TOKENS = 3_000;
 export const CHECKLIST_MAX_TOKENS = 900;
 
 export const NANO_TIMEOUT_MS = 45_000;
@@ -119,3 +119,23 @@ export const FALLBACK_STATUSES: readonly number[] = [
 /** A recent-change flag stays up only when the quoted line itself signals a revision or a year. */
 export const CHANGE_SIGNAL =
   /\b(20\d{2}|revis\w*|amend\w*|notification|extended|no longer|w\.e\.f|with effect)\b/i;
+/** The service's own portals, searched first so a generic gov.in page does not crowd them out. */
+const FOCUS_DOMAINS: ReadonlyArray<[RegExp, readonly string[]]> = [
+  [/passport/i, ["passportindia.gov.in", "mea.gov.in"]],
+  [/licen[cs]e|\bdl\b|driving|vehicle|\brc\b/i, ["parivahan.gov.in", "sarathi.parivahan.gov.in", "morth.nic.in", "punjabtransport.org"]],
+  [/voter|epic|electoral/i, ["eci.gov.in", "voters.eci.gov.in", "ceopunjab.gov.in"]],
+  [/\bpan\b|income tax/i, ["incometax.gov.in", "incometaxindia.gov.in", "protean-tinpan.com", "uidai.gov.in"]],
+  [/aadhaar|aadhar/i, ["uidai.gov.in", "myaadhaar.uidai.gov.in"]],
+  [/birth|death/i, ["crsorgi.gov.in", "censusindia.gov.in"]],
+  [/residen|domicile|income certificate|caste|sewa/i, ["connect.punjab.gov.in", "esewa.punjab.gov.in", "punjab.gov.in", "dgrpg.punjab.gov.in"]],
+];
+
+export function focusDomains(task: string, city: string): string[] | undefined {
+  for (const [pattern, domains] of FOCUS_DOMAINS) {
+    if (pattern.test(task)) {
+      void city;
+      return [...domains];
+    }
+  }
+  return undefined;
+}

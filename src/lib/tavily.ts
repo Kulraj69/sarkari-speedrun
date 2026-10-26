@@ -45,6 +45,40 @@ function isAuthStatus(error: unknown): boolean {
   return status === HTTP_STATUS.unauthorized || status === HTTP_STATUS.forbidden;
 }
 
+/** Indian missions abroad and court judgments are official but answer the wrong question. */
+const OFF_TARGET_HOST = /(embassy|consulate|^cgi|^hci|^www\.cgi|^www\.hci|highcourt|sci\.gov\.in|ecourts)/i;
+
+export function isOffTargetHost(url: string): boolean {
+  try {
+    return OFF_TARGET_HOST.test(new URL(url).hostname);
+  } catch {
+    return true;
+  }
+}
+
+const STOP = new Set(["what", "which", "where", "when", "with", "from", "that", "this", "the", "for", "and", "are", "how", "should", "used", "required", "india"]);
+
+/** The part of a long page that talks about the question, not the site menu at the top. */
+export function bestWindow(text: string, query: string, limit: number): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  if (flat.length <= limit) return flat;
+  const words = [...new Set(query.toLowerCase().match(/[a-z0-9]{3,}/g) ?? [])].filter((word) => !STOP.has(word));
+  if (words.length === 0) return clip(flat, limit);
+  const lower = flat.toLowerCase();
+  const step = Math.max(100, Math.floor(limit / 4));
+  let bestStart = 0;
+  let bestHits = -1;
+  for (let start = 0; start < flat.length; start += step) {
+    const slice = lower.slice(start, start + limit);
+    const hits = words.reduce((sum, word) => sum + slice.split(word).length - 1, 0);
+    if (hits > bestHits) {
+      bestHits = hits;
+      bestStart = start;
+    }
+  }
+  return flat.slice(bestStart, bestStart + limit).trim();
+}
+
 export async function searchTavily(request: TavilyRequest): Promise<TavilySearch> {
   const started = request.now();
   const body: Record<string, unknown> = {
@@ -94,6 +128,7 @@ export async function searchTavily(request: TavilyRequest): Promise<TavilySearch
   for (const item of results) {
     if (!isRecord(item) || typeof item.url !== "string" || !isPublicHttpUrl(item.url)) continue;
     if (!isOfficialHost(item.url)) continue;
+    if (isOffTargetHost(item.url)) continue;
     const title = typeof item.title === "string" && item.title.trim() ? item.title.trim() : item.url;
     const snippet =
       typeof item.content === "string"
@@ -120,7 +155,7 @@ interface ExtractPage {
 }
 
 async function extractTavily(
-  request: Pick<TavilyRequest, "fetch" | "apiKey" | "now">,
+  request: Pick<TavilyRequest, "fetch" | "apiKey" | "now" | "query">,
   urls: readonly string[],
 ): Promise<{ pages: ExtractPage[]; latencyMs: number }> {
   const started = request.now();
@@ -151,7 +186,7 @@ async function extractTavily(
     if (!isRecord(item) || typeof item.url !== "string") continue;
     const raw = typeof item.raw_content === "string" ? item.raw_content : "";
     if (!raw.trim()) continue;
-    pages.push({ url: item.url, raw: clip(raw, EXTRACT_SNIPPET_CHARS) });
+    pages.push({ url: item.url, raw: bestWindow(raw, request.query, EXTRACT_SNIPPET_CHARS) });
   }
   return { pages, latencyMs };
 }

@@ -23,6 +23,26 @@ npm run eval
 
 `npm run eval` prints a small accuracy table. It is labelled as a small sample, not a benchmark. In mock mode that table only checks that the cached demos still carry the hand-copied official quotes. It is not a live Nemotron score.
 
+## Live results (Oct 26, 2026)
+
+Seven live runs on Token Factory and Tavily, one each, no retries:
+
+| Task | Cited items kept | Sites cited | Time |
+| --- | --- | --- | --- |
+| renew passport, Patiala | 2 | passportindia.gov.in, mea.gov.in | 19 s |
+| link PAN with Aadhaar, Ludhiana | 2 | incometax.gov.in, incometaxindia.gov.in | 9 s |
+| renew driving licence, Amritsar | 2 | parivahan.gov.in | 17 s |
+| change address on voter ID, Patiala | 1 | eci.gov.in | 12 s |
+| residence certificate, Patiala | 4 | eservices.punjab.gov.in, rcms.punjab.gov.in | 20 s |
+| apply for birth certificate, Jalandhar (new) | 4 | crsorgi.gov.in | 24 s |
+| get income certificate, Mohali (new) | 0 | none | 12 s |
+
+Nemotron Super proposed 20 items across these runs. 15 survived the quote check. The other 5 quoted a line that was not on the cited page, so they were dropped. When nothing survives, the map stays empty; that is what happened for the Mohali income certificate.
+
+Each run used 4,700 to 7,100 tokens, about $0.002 at Token Factory list prices. All seven together cost about $0.014.
+
+`npm run eval` live: the exact hand-copied gold line came back in 0 of 10 checks, and the same official site was cited in 5 of 10. Live search finds different pages from the ones we copied by hand, so the exact-line score is low. Small sample, not a benchmark.
+
 ## Where Nemotron is used
 
 Token Factory exposes an OpenAI-compatible `POST /v1/chat/completions` API. Sarkari Speedrun uses three calls, and a fourth only when a line is shaky.

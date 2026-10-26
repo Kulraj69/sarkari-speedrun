@@ -90,6 +90,9 @@ export async function chatComplete(request: ChatRequest): Promise<ChatResult> {
         temperature: request.temperature,
         max_tokens: request.maxTokens,
         messages: request.messages,
+        // Nemotron 3 thinks by default. Thinking used the whole token budget and left
+        // the answer empty, so every step asks for the answer directly.
+        chat_template_kwargs: { enable_thinking: false },
       }),
       signal: AbortSignal.timeout(request.timeoutMs),
     });
