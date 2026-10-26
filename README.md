@@ -43,6 +43,10 @@ Each run used 4,700 to 7,100 tokens, about $0.002 at Token Factory list prices. 
 
 `npm run eval` live: the exact hand-copied gold line came back in 0 of 10 checks, and the same official site was cited in 5 of 10. Live search finds different pages from the ones we copied by hand, so the exact-line score is low. Small sample, not a benchmark.
 
+## Live limits
+
+The public site allows 5 live checks per IP per hour and 200 per day. Past either limit it serves the cached demos with a note. Counts are kept in memory per serverless instance, so these are soft caps. Override them with `LIVE_PER_IP_LIMIT` and `LIVE_DAILY_LIMIT`.
+
 ## Where Nemotron is used
 
 Token Factory exposes an OpenAI-compatible `POST /v1/chat/completions` API. Sarkari Speedrun uses three calls, and a fourth only when a line is shaky.
