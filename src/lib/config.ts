@@ -94,7 +94,7 @@ export const PRESENTATION_DELAY_MS = {
 
 export const ITEM_KINDS = ["step", "document", "fee", "office", "time", "change"] as const;
 
-export const DEMO_URL_PLACEHOLDER = "https://sarkari-speedrun-demo.example.com";
+export const DEMO_URL_PLACEHOLDER = "https://sarkari-speedrun.vercel.app";
 
 export const HTTP_STATUS = {
   unauthorized: 401,

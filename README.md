@@ -6,7 +6,7 @@ Every item on the map cites an official page and a line copied from that page. I
 
 It is built for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobalaihackathon.devpost.com). Planning, conflict-settling, and the bilingual checklist are NVIDIA Nemotron models on [Nebius Token Factory](https://tokenfactory.nebius.com/). [Tavily](https://tavily.com/) is the evidence step.
 
-**Live demo:** [https://sarkari-speedrun-demo.example.com](https://sarkari-speedrun-demo.example.com) *(placeholder — replace this after you deploy)*
+**Live demo:** [https://sarkari-speedrun.vercel.app](https://sarkari-speedrun.vercel.app) *(placeholder — replace this after you deploy)*
 
 ## One-command run
 

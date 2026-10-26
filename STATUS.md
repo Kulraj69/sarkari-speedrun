@@ -18,7 +18,7 @@ Source: https://nebiusglobalaihackathon.devpost.com (rules and dates pages, read
 ## Missing
 1. **NEBIUS_API_KEY**. There is none yet. Create one in Token Factory (org QualiaBits-9y5, kulsingh609@gmail.com) and save it to ../secrets/nebius_key.txt (chmod 600).
 2. Live mode has never run. The model ids still have to be confirmed against the Token Factory catalog.
-3. Not deployed. The README demo URL is a placeholder (sarkari-speedrun-demo.example.com).
+3. Not deployed. The README demo URL is a placeholder (sarkari-speedrun.vercel.app).
 4. No public repo. The original agent pushed to an "origin" whose URL isn't recorded in the transcript. Needs a public GitHub/GitLab repo with MIT showing in About.
 5. Video (under 3 minutes), Devpost description, and feedback write-up (Kulraj writes these; submit only with his yes).
 6. Rebuild caveats: the scaffold was regenerated today, so its files (layout boilerplate, ui components, package-lock) may differ slightly from the Oct 24 originals. The README was rebuilt from a truncated read plus diffs; check it reads cleanly. The env var is still named RECEIPTS_MODE, left over from the earlier Receipts idea; harmless.
@@ -41,3 +41,15 @@ Live mode needs **both** keys. With only NEBIUS_API_KEY set, `auto` stays in moc
 2. Run `RECEIPTS_MODE=live npm run demo`, then try the 5 demo tasks plus 2 new ones and `npm run eval` live. Fix any model-id or response errors.
 3. Push to a public GitHub repo and deploy with render.yaml or Vercel (keys as host secrets). Update the README URL.
 4. Record the video (2:45), then draft the description and feedback, then Kulraj's yes, then submit by Oct 30, 6 PM IST (4 hours of buffer).
+
+## Oct 26, 2026: live, published, deployed
+
+- Repo: https://github.com/Kulraj69/sarkari-speedrun (public, MIT)
+- Live site: https://sarkari-speedrun.vercel.app (Vercel, live mode, keys stored as Vercel env vars)
+- Live results: 6 of 7 tasks returned cited items. The quote check dropped 5 of 20 proposed items. Eval: exact gold line 0 of 10, same official site 5 of 10. Each run costs about $0.002.
+- Fixes:
+  - Turned off Nemotron thinking. Super's reasoning was using up the token budget and leaving no answer.
+  - Restricted Tavily to each service's own portal.
+  - Filtered out embassy and court pages.
+  - Each evidence snippet is now the most relevant 1,600-character section of the page.
+- Vercel: the CLI build left out devDependencies, so `vercel.json` now installs with `--include=dev`. The project framework is set to nextjs.
