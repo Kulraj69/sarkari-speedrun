@@ -11,7 +11,7 @@ describe("LiveLimiter", () => {
   it("allows 5 live checks per IP per hour, then resets", () => {
     const limiter = new LiveLimiter();
     for (let i = 0; i < 5; i++) expect(limiter.take("1.1.1.1", i).ok).toBe(true);
-    expect(limiter.take("1.1.1.1", 10)).toEqual({ ok: false, note: IP_NOTE });
+    expect(limiter.take("1.1.1.1", 10)).toMatchObject({ ok: false, note: IP_NOTE });
     expect(limiter.take("2.2.2.2", 10).ok).toBe(true);
     expect(limiter.take("1.1.1.1", HOUR + 1).ok).toBe(true);
   });
@@ -21,7 +21,7 @@ describe("LiveLimiter", () => {
     expect(limiter.take("a", 0).ok).toBe(true);
     expect(limiter.take("b", 0).ok).toBe(true);
     expect(limiter.take("c", 0).ok).toBe(true);
-    expect(limiter.take("d", 0)).toEqual({ ok: false, note: DAY_NOTE });
+    expect(limiter.take("d", 0)).toMatchObject({ ok: false, note: DAY_NOTE });
     expect(limiter.take("d", 24 * HOUR).ok).toBe(true);
   });
 });

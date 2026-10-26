@@ -1,7 +1,7 @@
 import { errorMessage, isRecord } from "@/lib/json";
 import { resolveMode } from "@/lib/env";
 import { createDefaultDeps, runPipeline } from "@/lib/pipeline";
-import { clientIp, liveLimiter, type LiveLimiter } from "@/lib/rate-limit";
+import { clientIp, INSTANCE_ID, liveLimiter, type LiveLimiter } from "@/lib/rate-limit";
 import type { PipelineDeps } from "@/lib/types";
 
 const JSON_ERROR = "Send JSON with a text field.";
@@ -24,8 +24,10 @@ export async function createCheckResponse(
 
   const text = body.text;
   let note: string | undefined;
+  let limitHeader = "not-live";
   if (text.trim() && wouldRunLive(deps)) {
     const verdict = limiter.take(clientIp(request), deps.now());
+    limitHeader = verdict.ok ? `used ${verdict.used ?? 0};${INSTANCE_ID}` : `limited;${INSTANCE_ID}`;
     if (!verdict.ok) {
       note = verdict.note;
       deps = { ...deps, env: { ...deps.env, mode: "mock" } };
@@ -52,6 +54,7 @@ export async function createCheckResponse(
     headers: {
       "Content-Type": "application/x-ndjson; charset=utf-8",
       "Cache-Control": "no-store",
+      "X-Live-Limit": limitHeader,
     },
   });
 }

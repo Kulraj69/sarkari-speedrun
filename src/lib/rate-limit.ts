@@ -5,7 +5,7 @@ export const PER_IP_LIMIT = 5;
 export const PER_IP_WINDOW_MS = 60 * 60 * 1000;
 export const DAILY_LIMIT = 200;
 
-export type LimitResult = { ok: true } | { ok: false; note: string };
+export type LimitResult = { ok: true; used?: number } | { ok: false; note: string };
 
 export const IP_NOTE =
   "You have used your 5 live checks for this hour. This one uses the cached demos instead, so no live search ran. Try again within the hour.";
@@ -40,7 +40,7 @@ export class LiveLimiter {
     this.hits.set(ip, recent);
     this.dayCount += 1;
     if (this.hits.size > 10_000) this.prune(now);
-    return { ok: true };
+    return { ok: true, used: recent.length };
   }
 
   private prune(now: number) {
@@ -50,7 +50,19 @@ export class LiveLimiter {
   }
 }
 
-export const liveLimiter = new LiveLimiter();
+export const INSTANCE_ID = Math.random().toString(36).slice(2, 8);
+
+function envInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  const n = raw === undefined || raw === "" ? NaN : Number(raw);
+  return Number.isInteger(n) && n >= 0 ? n : fallback;
+}
+
+export const liveLimiter = new LiveLimiter(
+  envInt("LIVE_PER_IP_LIMIT", PER_IP_LIMIT),
+  PER_IP_WINDOW_MS,
+  envInt("LIVE_DAILY_LIMIT", DAILY_LIMIT),
+);
 
 export function clientIp(request: Request): string {
   const fwd = request.headers.get("x-forwarded-for");
