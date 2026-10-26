@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: sarkari-speedrun
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NEBIUS_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: RECEIPTS_MODE
+        value: auto
+      - key: NEBIUS_BASE_URL
+        value: https://api.tokenfactory.nebius.com/v1
+      - key: NEBIUS_NANO_MODEL
+        value: nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B
+      - key: NEBIUS_SUPER_MODEL
+        value: nvidia/nemotron-3-super-120b-a12b
+      - key: NEBIUS_CHECK_FALLBACK_MODEL
+        value: nvidia/Nemotron-3-Ultra-550b-a55b
