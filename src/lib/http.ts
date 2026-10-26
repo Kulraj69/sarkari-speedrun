@@ -1,5 +1,7 @@
 import { errorMessage, isRecord } from "@/lib/json";
+import { resolveMode } from "@/lib/env";
 import { createDefaultDeps, runPipeline } from "@/lib/pipeline";
+import { clientIp, liveLimiter, type LiveLimiter } from "@/lib/rate-limit";
 import type { PipelineDeps } from "@/lib/types";
 
 const JSON_ERROR = "Send JSON with a text field.";
@@ -7,6 +9,7 @@ const JSON_ERROR = "Send JSON with a text field.";
 export async function createCheckResponse(
   request: Request,
   deps: PipelineDeps = createDefaultDeps(true),
+  limiter: LiveLimiter = liveLimiter,
 ): Promise<Response> {
   let body: unknown;
   try {
@@ -20,11 +23,20 @@ export async function createCheckResponse(
   }
 
   const text = body.text;
+  let note: string | undefined;
+  if (text.trim() && wouldRunLive(deps)) {
+    const verdict = limiter.take(clientIp(request), deps.now());
+    if (!verdict.ok) {
+      note = verdict.note;
+      deps = { ...deps, env: { ...deps.env, mode: "mock" } };
+    }
+  }
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        for await (const event of runPipeline(text, deps)) {
+        for await (const raw of runPipeline(text, deps)) {
+          const event = note && raw.type === "meta" ? { ...raw, note } : raw;
           controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
         }
       } catch (error) {
@@ -42,4 +54,12 @@ export async function createCheckResponse(
       "Cache-Control": "no-store",
     },
   });
+}
+
+function wouldRunLive(deps: PipelineDeps): boolean {
+  try {
+    return resolveMode(deps.env) === "live";
+  } catch {
+    return false;
+  }
 }

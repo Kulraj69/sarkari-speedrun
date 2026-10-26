@@ -87,6 +87,7 @@ export interface MetaEvent {
   task: string;
   city: string;
   fixtureId: string | null;
+  note?: string;
 }
 
 export interface TraceEvent {
@@ -162,6 +163,7 @@ export interface BoardState {
   task: string;
   city: string;
   fixtureId: string | null;
+  note: string | null;
   questions: SubQuestion[];
   evidenceByQuestion: Record<string, Evidence[]>;
   items: GuideItem[];

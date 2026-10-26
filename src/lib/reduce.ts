@@ -8,6 +8,7 @@ export function createBoardState(): BoardState {
     task: "",
     city: "",
     fixtureId: null,
+    note: null,
     questions: [],
     evidenceByQuestion: {},
     items: [],
@@ -32,6 +33,7 @@ export function applyEvent(state: BoardState, event: PipelineEvent): BoardState 
         task: event.task,
         city: event.city,
         fixtureId: event.fixtureId,
+        note: event.note ?? null,
         error: null,
       };
     case "trace":
