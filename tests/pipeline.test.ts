@@ -366,6 +366,33 @@ describe("guards", () => {
     expect(item?.recentChange).toBe(false);
   });
 
+  it("rejects a fee with uncited paise and accepts equivalent decimal formatting", () => {
+    const raw = feeItem(0.9) as Record<string, unknown>;
+    const evidence = [{ title: "Fees", url: FEE_URL, snippet: FEE_SNIPPET, score: 0.5 }];
+    expect(sanitizeItem({
+      raw: { ...raw, detail: "Renewal costs Rs. 200.50." },
+      evidence, sample: false, order: 1,
+    })).toBeNull();
+    expect(sanitizeItem({
+      raw: { ...raw, detail: "Renewal costs ₹200." },
+      evidence, sample: false, order: 1,
+    })?.kind).toBe("fee");
+    expect(rupeeAmounts("Rs. 200.50 and ₹0200.500")).toEqual(["200.5", "200.5"]);
+  });
+
+  it("accepts a quote in a later snippet of the same URL, but not another page", () => {
+    const unrelated = { title: "Fees", url: FEE_URL, snippet: "Select your state to view the available services.", score: 0.5 };
+    const matching = { title: "Fees", url: FEE_URL, snippet: FEE_SNIPPET, score: 0.5 };
+    expect(sanitizeItem({
+      raw: feeItem(0.9), evidence: [unrelated, matching], sample: false, order: 1,
+    })?.kind).toBe("fee");
+    expect(sanitizeItem({
+      raw: feeItem(0.9),
+      evidence: [unrelated, { ...matching, url: "https://parivahan.gov.in/another-page" }],
+      sample: false, order: 1,
+    })).toBeNull();
+  });
+
   it("sorts nothing from a non-official hit", async () => {
     const fetchImpl: typeof fetch = async () =>
       jsonResponse({

@@ -64,7 +64,7 @@ export function StepMap({ board, onCopy, copied }: StepMapProps) {
             <CardTitle>The run stopped</CardTitle>
           </CardHeader>
           <CardContent>
-            <p data-testid="error-message">{board.error}</p>
+            <p role="alert" data-testid="error-message">{board.error}</p>
           </CardContent>
         </Card>
       ) : null}
@@ -79,7 +79,9 @@ export function StepMap({ board, onCopy, copied }: StepMapProps) {
 
       {board.status === "running" && board.items.length === 0 && !board.error ? (
         <Card>
-          <CardContent className="py-6 text-sm text-muted-foreground">Opening official pages…</CardContent>
+          <CardContent role="status" className="py-6 text-sm text-muted-foreground">
+            {board.mode === "mock" ? "Loading the cached demo…" : "Preparing your step map…"}
+          </CardContent>
         </Card>
       ) : null}
 
@@ -114,7 +116,7 @@ export function StepMap({ board, onCopy, copied }: StepMapProps) {
                   {board.checklist.english}
                 </p>
               </div>
-              <div>
+              <div lang="hi">
                 <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">हिन्दी</p>
                 <p className="mt-1 text-sm leading-relaxed" data-testid="checklist-hi">
                   {board.checklist.hindi}
@@ -145,12 +147,17 @@ function Station({ item, index }: { item: GuideItem; index: number }) {
           <Icon className="size-4 text-primary" aria-hidden />
           <span className="text-xs font-semibold tracking-wide text-primary uppercase">{KIND_LABEL[item.kind]}</span>
           {item.recentChange ? (
-            <span className="rounded-full bg-[#f3e0c4] px-2 py-0.5 text-xs font-semibold text-[#8a4b12]">
-              Recent change
+            <span
+              className="rounded-full bg-[#f3e0c4] px-2 py-0.5 text-xs font-semibold text-[#8a4b12]"
+              title="The quote mentions a date or change. Recency has not been verified."
+            >
+              Source date / change
             </span>
           ) : null}
           {item.basis === "live-evidence" ? (
-            <span className="text-xs text-muted-foreground">{Math.round(item.confidence * 100)}%</span>
+            <span className="text-xs text-muted-foreground" title="Model estimate, not a measured accuracy score.">
+              Model confidence {Math.round(item.confidence * 100)}%
+            </span>
           ) : null}
         </div>
         <h3 className="mt-2 text-base font-semibold leading-snug">{item.title}</h3>

@@ -18,9 +18,13 @@ export function quoteMatchesSnippet(quote: string, snippet: string): boolean {
 export function rupeeAmounts(text: string): string[] {
   const found: string[] = [];
   for (const match of text.matchAll(RUPEE_AMOUNT)) {
-    const digits = match[1]?.replace(/,/g, "").replace(/\.0+$/, "") ?? "";
-    const whole = digits.split(".")[0] ?? "";
-    if (whole) found.push(whole);
+    const digits = match[1]?.replace(/,/g, "") ?? "";
+    const [whole, fraction = ""] = digits.split(".");
+    const decimals = fraction.replace(/0+$/, "");
+    if (whole) {
+      const rupees = whole.replace(/^0+(?=\d)/, "");
+      found.push(decimals ? `${rupees}.${decimals}` : rupees);
+    }
   }
   return found;
 }
@@ -51,8 +55,10 @@ export function sanitizeItem(input: SanitizeItemInput): GuideItem | null {
   const detail = asString(input.raw.detail) ?? "";
   if (!title || !url || !isPublicHttpUrl(url) || !isOfficialHost(url)) return null;
 
-  const page = input.evidence.find((item) => item.url === url);
-  if (!page || !quoteMatchesSnippet(quote, page.snippet)) return null;
+  const page = input.evidence.find(
+    (item) => item.url === url && quoteMatchesSnippet(quote, item.snippet),
+  );
+  if (!page) return null;
   if (!amountsAreCited(`${title} ${detail}`, [quote])) return null;
 
   const confidence = clamp(typeof input.raw.confidence === "number" ? input.raw.confidence : 0, 0, 1);

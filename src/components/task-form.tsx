@@ -1,6 +1,7 @@
 "use client";
 
 import { DEMO_TASKS } from "@/lib/fixtures";
+import { MAX_INPUT_CHARS } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,14 +20,18 @@ export function TaskForm({ draft, running, onDraft, onRun }: TaskFormProps) {
         <CardTitle>The task</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        <label htmlFor="task-input" className="text-sm font-medium">Government task and city</label>
         <Textarea
+          id="task-input"
           data-testid="task-input"
+          disabled={running}
+          maxLength={MAX_INPUT_CHARS}
           value={draft}
           placeholder="renew passport, Patiala"
           rows={3}
           onChange={(event) => onDraft(event.target.value)}
           onKeyDown={(event) => {
-            if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+            if (!running && draft.trim() && (event.metaKey || event.ctrlKey) && event.key === "Enter") {
               event.preventDefault();
               onRun(draft);
             }
