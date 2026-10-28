@@ -1,31 +1,25 @@
-# Demo video script (target 2:40)
+# Sarkari Speedrun — honest demo script
 
-**0:00–0:20: The problem**
-On screen: Google results for "renew driving licence Punjab", with forums and old PDFs.
-Voice: "Renewing a licence in Punjab isn't hard. Finding the real steps is. Ask a chatbot and you get a confident answer you can't check. A wrong fee or form costs you a trip."
+## Local cached walkthrough (recorded, no live providers)
+Artifact: `demo/sarkari-cached-walkthrough.mp4`. The original root `demo.mp4` is preserved separately and its content has not been reviewed.
 
-**0:20–0:35: The idea**
-On screen: the Sarkari Speedrun home page.
-Voice: "Sarkari Speedrun gives you the steps, and every step quotes a line from an official government page. No quote, no step."
+Keep **Mock · cached demos** visible and the caption **Cached demo — no live Token Factory or Tavily calls** on screen. All government instructions here are fixture text, not freshly verified advice. No voiceover is needed; the recording shows actual interaction, not reconstructed results.
 
-**0:35–1:25: A live run**
-Type "renew driving licence, Amritsar" and run it. Show the trace panel filling in.
-Voice: "Nemotron Nano on Nebius Token Factory splits this into questions: fees, documents, where to go. Tavily searches only parivahan.gov.in. Nemotron Super reads what came back and proposes steps, each with a quote."
-Click a step to show the quote and the parivahan link.
-Voice: "Our code checks that this exact line is on that page. If it isn't, the step is gone."
+Sequence:
+1. Start on the local production build, not the deployed site. Point to the mock badge.
+2. Select **Renew a passport**. Show the cited cards and the Hindi/English checklist.
+3. Select **Link PAN and Aadhaar**, then **Renew a driving licence**. Show each real cached map; a displayed quote does not prove current eligibility or fees.
+4. Select **Change the address on a voter ID**. The Form 8 citation and older FAQ conflict explain why source context matters.
+5. Select **Punjab residence certificate**. Show its cached checklist; do not invent a rupee fee or claim coverage beyond Punjab.
+6. Enter `renew arms licence, Jaipur`. Show the empty map. Explain: **not in the cache; no live search ran**, not “the model found no evidence.”
+7. Open **Sample eval** and click **Score this sample**. Show **Matched 10 of 10. Mode: mock.** Explain this checks shared fixture quotes, not independent accuracy.
 
-**1:25–1:45: The checklist**
-On screen: the Hindi/English checklist.
-Voice: "Nano writes the checklist in Hindi and English, using only lines that passed the check."
+## Optional live segment — requires separate authorization
+Do not record live just by following this script. After approved provider use, capture the actual task, live-mode badge, model IDs, Tavily search/extract trace and a surviving official quote. If nothing survives, retain that outcome. Do not replace it with a cached result or use historical timings as new measurements. Source guards match retrieved text, not the entire current web page.
 
-**1:45–2:15: When it says nothing**
-On screen: the Mohali income certificate run with an empty map.
-Voice: "Here it found nothing it could quote, so it shows nothing. Across seven live tasks, six returned cited steps. Super proposed 20 items and five quoted lines that weren't on the page. All five were dropped."
-
-**2:15–2:35: Honest numbers**
-On screen: the eval output.
-Voice: "On ten hand-labelled questions it cited the same official site we would have in five. It never reproduced our exact line, because live search finds different pages. It's a small sample, and we show it as one."
-
-**2:35–2:45: Close**
-On screen: the URL and the repo.
-Voice: "Sarkari Speedrun. Steps you can check. It's live at sarkari-speedrun.vercel.app."
+## Before public upload / entry edit
+- Keep the final video below three minutes and verify duration with ffprobe.
+- Review footage/audio for secrets, personal data, unsupported statistics, trademarks/music requiring permission and false live claims.
+- The silent cached walkthrough is supplementary; by itself it does not establish runtime sponsor use.
+- Kulraj must approve the chosen video and exact public YouTube upload separately. Verify its public URL and then approve the revised existing Devpost entry fields.
+- Do not paste an invented YouTube URL. Do not claim the old root MP4 is compliant based on metadata alone.

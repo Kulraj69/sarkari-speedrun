@@ -1,5 +1,20 @@
 # Sarkari Speedrun hackathon review
 
+## October 28 audit update — current findings
+
+The sections below this update preserve the October 27 review as historical context, not current verification. [STATUS.md](STATUS.md) is the current status; raw evidence is in `../hermes-reports/A2-evidence/` and the detailed audit is `../hermes-reports/A2-sarkari-speedrun.md`.
+
+- Read-only public checks confirmed the deployed homepage responds and GitHub reports a public MIT repository. No deployed task, public eval, paid provider or credential check was performed. Devpost entry/rules direct reads were blocked, including a browser attempt; indexed official rules reconfirm the October 30 10:00 AM Pacific deadline and YouTube/public-repo/feedback requirements.
+- Fixed the public evaluation budget bypass locally: `/api/eval` is now always a cache consistency check, regardless of live/auto/mock server mode. Added regression tests with synthetic inputs and a network spy, and explicit UI wording. CLI live evaluation is unchanged and must be authorized separately. This fix is **not deployed**.
+- Final local checks: 29 tests, lint, production build and typecheck pass; CLI mock eval is 10/10. Production browser checks exercise five cached maps, an unsupported task, eval and mobile tabs. These are not live model accuracy or real-user impact evidence.
+- Replaced stale contradictory status notes, clarified README verification boundaries, and added a concrete cached-demo script and local recording. The original root MP4 is unchanged; only its metadata was checked.
+- Removed ready-to-paste AI feedback from the submission draft. **Kulraj must author that section himself.** Historical live results remain explicitly unverified until supported by the original trace.
+- Still open: final-map eval semantics/error separation; city/jurisdiction routing; source freshness and meaning; translation validation; copy provenance; incomplete fallback trace accounting; distributed budget enforcement; live timeout strategy. The changes here do not fix these broader limitations.
+
+---
+
+## Historical October 27 review
+
 Reviewed locally on October 27, 2026. Scope: README.md, STATUS.md, submission-draft.md, application code, and tests. Videos and demo-script.md were not opened or changed. No deployment, commit, or live provider run was performed.
 
 ## Criteria and evidence boundary

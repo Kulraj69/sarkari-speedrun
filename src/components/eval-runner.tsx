@@ -36,6 +36,9 @@ export function EvalRunner() {
 
   return (
     <section className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Cached fixtures only. This does not call Token Factory or Tavily and is not a live model score.
+      </p>
       <Button type="button" data-testid="eval-run" disabled={running} onClick={() => void run()}>
         {running ? "Scoring the sample…" : "Score this sample"}
       </Button>

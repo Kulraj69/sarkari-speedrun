@@ -10,26 +10,39 @@ It is built for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobalai
 
 **Live demo:** [https://sarkari-speedrun.vercel.app](https://sarkari-speedrun.vercel.app)
 
-## One-command run
+## Verified state (October 28, 2026)
+
+The deployed homepage and unauthenticated GitHub repository were reachable during a read-only audit. GitHub detects the public [MIT licence](LICENSE). No live task was sent to the deployment or paid provider. Provider configuration and current live model availability were not inspected.
+
+The local audit fixes and docs below are **not deployed**. The submitted Devpost entry is reported in the project handoff, but its actual fields, track, feedback and YouTube link could not be independently inspected behind Devpost's security challenge.
+
+## Local cached demo
 
 ```bash
-npm install && npm run demo
+npm ci
+RECEIPTS_MODE=mock npm run demo
 ```
 
-Open [http://127.0.0.1:41731](http://127.0.0.1:41731). With no API keys the five cached demos still run. Other tasks stay an empty map.
+Open [http://127.0.0.1:41731](http://127.0.0.1:41731). Explicit mock mode prevents provider calls even if the host has live configuration. Do not use real identity documents or personal details.
+
+1. Select **Renew a driving licence** → a cached Amritsar map with a renewal-fee quote and Parivahan source link.
+2. Read the quote and bilingual checklist → these are fixture content, not freshly retrieved instructions. Check the source before acting.
+3. Select **Change the address on a voter ID** → inspect the Form 8 item and the older FAQ conflict.
+4. Enter `renew arms licence, Jaipur` → an empty cached map, not an invented answer and not a failed live search.
+5. Open **Sample eval**, then **Score this sample** → a mock consistency score. The public eval route in this local version always uses fixtures, even on a live-configured server.
 
 ```bash
 npm test
 npm run eval
 ```
 
-`npm run eval` prints a small accuracy table. It is labelled as a small sample, not a benchmark. In mock mode that table only checks that the cached demos still carry the hand-copied official quotes. It is not a live Nemotron score.
+`RECEIPTS_MODE=mock npm run eval` prints a small consistency table against hand-copied official quotes shared with the fixtures. It is not an independent accuracy benchmark or a live Nemotron score.
 
 The eval CLI reads the shell environment; it does not automatically load `.env.local`. Use `RECEIPTS_MODE=mock npm run eval` for an explicit cache-only check. For live evaluation, export both API keys and `RECEIPTS_MODE=live` in the shell first.
 
 ## Live results (Oct 26, 2026)
 
-Previously recorded results from seven live runs on Token Factory and Tavily, one each, with no manual reruns. These results were not re-measured during this review; the pipeline can perform an automatic low-confidence second pass.
+Historical project notes record seven live runs on Token Factory and Tavily, one each, with no manual reruns. No underlying live trace was available in the reviewed source files; these numbers are unverified historical notes, not October 28 audit measurements. The pipeline can perform an automatic low-confidence second pass.
 
 | Task | Cited items kept | Sites cited | Time |
 | --- | --- | --- | --- |
@@ -49,7 +62,7 @@ Previously recorded `npm run eval` live: the exact hand-copied gold line came ba
 
 ## Live limits
 
-`/api/check` allows 5 live checks per IP per hour and 200 per UTC day. Past either limit it serves the cached demos with a note; uncached tasks stay empty. Counts are kept in memory per serverless instance, so these are soft caps. Override them with `LIVE_PER_IP_LIMIT` and `LIVE_DAILY_LIMIT`. `/api/eval` currently runs outside this limiter.
+`/api/check` allows 5 live checks per IP per hour and 200 per UTC day. Past either limit it serves the cached demos with a note; uncached tasks stay empty. Counts are kept in memory per serverless instance, so these are soft caps, not a spend guarantee. Override them with `LIVE_PER_IP_LIMIT` and `LIVE_DAILY_LIMIT`. The local `/api/eval` fix makes the public sample cache-only; live evaluation remains an explicit operator CLI action. This fix has not been deployed.
 
 ## Where Nemotron is used
 
@@ -134,13 +147,11 @@ flowchart LR
   api --> panel[Trace panel: model, tokens, latency]
 ```
 
-The route streams newline-delimited JSON, so stations appear as they resolve. `/eval` and `npm run eval` score ten hand-checked quotes across the five tasks.
+The route streams newline-delimited JSON, so stations appear as they resolve. `/eval` checks ten fixture quotes across the five tasks. The CLI can also run live, but requires authorization for provider use; its scores do not validate meaning, jurisdiction or freshness.
 
 ## Setup
 
-```bash
-cp .env.example .env.local
-```
+No configuration file is needed for mock mode. For an authorized live run, configure the required variables securely in the host environment. Never place real credentials in documentation, recordings or committed files.
 
 | Variable | Required | Purpose |
 | --- | --- | --- |

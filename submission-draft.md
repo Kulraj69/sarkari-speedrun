@@ -1,5 +1,7 @@
 # Sarkari Speedrun: Devpost draft
 
+**Local working draft, not submitted by this audit. Kulraj must review and write the final description in his own words.** The handoff reports an existing submission, but its fields could not be inspected on October 28 because Devpost returned a security challenge. Do not assume this draft matches that entry.
+
 **Tagline:** Type a government task and a city. Get the steps, each one quoted from an official page.
 
 **Planned track:** Apps & Agents. **Planned bonus entries:** Best Use of Tavily and Most Valuable Feedback, as recorded in STATUS.md.
@@ -30,11 +32,11 @@ The rule we built around: an empty answer is better than an invented one.
 - Nano writes the bilingual checklist from the surviving lines only.
 - The trace panel shows each model call, its tokens, and its latency.
 
-It is a Next.js app deployed on Vercel. The main check endpoint has soft limits per IP and per day; after either limit it serves cached demos with a note, or an empty map for uncached tasks. The eval endpoint currently runs outside those limits.
+It is a Next.js app deployed on Vercel. The main check endpoint has soft limits per IP and per day; after either limit it serves cached demos with a note, or an empty map for uncached tasks. A local, not-yet-deployed fix makes the public eval endpoint cache-only. Authorized live evaluation remains available through the CLI.
 
 ## Results
 
-The project notes record seven tasks run live on Oct 26, 2026, once each without manual reruns. These results were not re-measured during this review; the pipeline can automatically recheck a low-confidence item.
+The project notes record seven tasks run live on Oct 26, 2026, once each without manual reruns. No raw trace supporting these historical numbers was available in the reviewed source files. Kulraj must verify the original evidence before putting them in the final entry. They were not re-measured during this audit; the pipeline can automatically recheck a low-confidence item.
 
 - 6 of 7 returned cited items: passport (Patiala), PAN–Aadhaar link (Ludhiana), driving licence (Amritsar), voter ID address change (Patiala), residence certificate (Patiala), birth certificate (Jalandhar).
 - The seventh, an income certificate in Mohali, came back empty. Nothing survived the quote check, so we showed nothing.
@@ -54,7 +56,16 @@ The quote check is the product's core constraint. In the recorded seven-run samp
 
 ## Feedback on Nebius and NVIDIA tools
 
-Token Factory's shared API shape let us use Nano for planning and checklists, Super for checking, and an Ultra availability fallback without separate SDKs. Nemotron's default thinking exhausted the answer budget in early runs; setting `chat_template_kwargs.enable_thinking` to `false` resolved that failure. Clearer examples of reasoning versus answer token budgets would have made setup easier.
+**TODO — Kulraj-authored feedback required. This section is not ready for submission or the feedback prize.** Do not present AI-drafted feedback as his firsthand experience.
+
+Prompts for Kulraj, not answers to paste:
+- What did you personally use Token Factory and each NVIDIA model for?
+- Did the shared OpenAI-compatible endpoint help? Give a concrete example from your own session.
+- Did you personally reproduce the thinking/answer-budget issue recorded in the build notes? If yes, describe the model, symptom, fix and a redacted reproducible example.
+- What was confusing during setup? What one documentation change would help? Would you reuse the tools, and why?
+- Mention AI Cloud only if you actually used it. Vercel hosting is not Nebius AI Cloud use.
+
+Code facts available for checking: one chat-completions API serves Nano/Super/Ultra; requests set `chat_template_kwargs.enable_thinking` to `false`. These facts are not a substitute for personal tool feedback.
 
 ## What's next
 
@@ -67,3 +78,12 @@ Token Factory's shared API shape let us use Nano for planning and checklists, Su
 Next.js, TypeScript, NVIDIA Nemotron 3 (Nano, Super), Nebius Token Factory, Tavily, Vercel.
 
 Links: https://sarkari-speedrun.vercel.app · https://github.com/Kulraj69/sarkari-speedrun
+
+## Before editing the existing entry (approval required)
+- Confirm the exact entry URL, current submission state and selected Apps & Agents track; do not create a duplicate.
+- Confirm its source URL points to the public MIT repository and its demo URL works.
+- Confirm runtime Token Factory/NVIDIA and Tavily evidence from an authorized live run. Cached demos do not prove sponsor eligibility.
+- Verify the public YouTube link and footage under three minutes. A local MP4 does not satisfy the public-link requirement.
+- Replace the feedback TODO with Kulraj's own observations, and review all historical numbers against evidence.
+- Recheck the form deadline: indexed official rules say October 30, 2026 at 10:00 AM Pacific (10:30 PM IST).
+- Approve the exact revised fields separately from any push, deployment or upload.

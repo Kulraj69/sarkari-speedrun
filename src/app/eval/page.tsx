@@ -25,8 +25,8 @@ export default function EvalPage() {
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
         <p className="text-sm leading-relaxed text-muted-foreground">
           Each row is a line copied from an official page, with the URL beside it. The score asks whether the run
-          still carries that quote. In mock mode the five cached demos are replayed, so the table is not a live
-          Nemotron score.
+          still carries that quote. This page always replays the five cached demos, so the table is not a live
+          Nemotron score or an independent accuracy benchmark.
         </p>
         <div className="overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10">
           <table className="w-full min-w-[40rem] text-left text-sm" data-testid="eval-gold">
