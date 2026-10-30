@@ -6,8 +6,9 @@ export interface EvalRow {
   id: string;
   task: string;
   label: string;
-  found: boolean;
-  sameSite?: boolean;
+  found: boolean | null;
+  sameSite?: boolean | null;
+  error?: string | null;
 }
 
 export interface EvalReport {
@@ -15,6 +16,7 @@ export interface EvalReport {
   rows: EvalRow[];
   agreement: number;
   total: number;
+  failed: number;
   liveScore: boolean;
   heading: string;
   note: string;
@@ -23,9 +25,9 @@ export interface EvalReport {
 export function formatAccuracyTable(report: EvalReport): string {
   const header = "task".padEnd(30) + "check".padEnd(28) + "exact line".padEnd(12) + "same site";
   const lines = report.rows.map((row) => {
-    const found = row.found ? "yes" : "no";
-    const site = row.sameSite === undefined ? "-" : row.sameSite ? "yes" : "no";
-    return row.task.padEnd(30) + row.label.padEnd(28) + found.padEnd(12) + site;
+    const found = row.found === null ? "not scored" : row.found ? "yes" : "no";
+    const site = row.sameSite == null ? "-" : row.sameSite ? "yes" : "no";
+    return row.task.padEnd(30) + row.label.padEnd(28) + found.padEnd(12) + site + (row.error ? ` — ${row.error}` : "");
   });
   const sameSite = report.rows.filter((row) => row.sameSite).length;
   return [
@@ -37,6 +39,8 @@ export function formatAccuracyTable(report: EvalReport): string {
     ...lines,
     "",
     `Exact gold line: ${report.agreement} of ${report.total}. Cited the same official site: ${sameSite} of ${report.total}.`,
+    `Failed/incomplete checks: ${report.failed} of ${report.rows.length}; excluded from the scored denominator.`,
+    "Degraded runs with retrieval or generation warnings are also excluded.",
   ].join("\n");
 }
 
@@ -47,7 +51,8 @@ export function reportFromRows(mode: RunMode, rows: EvalRow[]): EvalReport {
     mode,
     rows,
     agreement,
-    total: rows.length,
+    total: rows.filter((row) => row.found !== null).length,
+    failed: rows.filter((row) => row.found === null).length,
     liveScore,
     heading: SMALL_SAMPLE_LABEL,
     note: liveScore ? LIVE_SCORE_NOTE : MOCK_SCORE_NOTE,

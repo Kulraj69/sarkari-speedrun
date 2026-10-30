@@ -1,3 +1,27 @@
+import type { BoardState } from "@/lib/types";
+import { isOfficialSourceUrl } from "@/lib/trust";
+
+export function checklistText(board: BoardState): string {
+  if (!board.checklist) return "";
+  const banner = board.fixtureId !== null ? CACHED_BANNER
+    : board.mode === "mock" ? MOCK_EMPTY_BANNER : LIVE_BANNER;
+  const sources = board.items.map((item, index) =>
+    `${index + 1}. ${item.title}\nQuote: ${item.quote}\n${isOfficialSourceUrl(item.url)
+      ? `Source: ${item.url}` : "Source link withheld: unsupported source URL."}`,
+  );
+  return [
+    "Sarkari Speedrun — " + [board.task, board.city].filter(Boolean).join(", "),
+    banner,
+    "Not official guidance. Quotes may be outdated or inapplicable; verify the source before paying or travelling.",
+    board.status !== "done" ? "Run incomplete; this is a partial checklist." : "",
+    board.note ?? "",
+    board.warnings.length ? "Run degraded:\n" + board.warnings.join("\n") : "",
+    board.checklist.english,
+    board.checklist.hindi,
+    sources.length ? "Cited map items (not an independent check of the translation):\n" + sources.join("\n\n") : "No cited map items.",
+  ].filter(Boolean).join("\n\n");
+}
+
 export const CACHED_BANNER =
   "Cached demo. These lines are quotes from the linked official pages. No Token Factory or Tavily call was made.";
 

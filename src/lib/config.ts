@@ -53,6 +53,8 @@ export const CHECK_MAX_TOKENS = 3_000;
 export const CHECKLIST_MAX_TOKENS = 900;
 
 export const NANO_TIMEOUT_MS = 45_000;
+/** Leave time to emit a terminal event before the route's 60-second limit. */
+export const RUN_TIMEOUT_MS = 55_000;
 export const CHECK_TIMEOUT_MS = 55_000;
 export const TAVILY_TIMEOUT_MS = 20_000;
 export const TAVILY_EXTRACT_TIMEOUT_MS = 8_000;
@@ -70,8 +72,6 @@ export const OFFICIAL_INCLUDE_DOMAINS = [
   "eci.gov.in",
   "voters.eci.gov.in",
   "india.gov.in",
-  "punjab.gov.in",
-  "eservices.punjab.gov.in",
   "mea.gov.in",
   "nic.in",
   "gov.in",
@@ -122,18 +122,18 @@ export const CHANGE_SIGNAL =
 /** The service's own portals, searched first so a generic gov.in page does not crowd them out. */
 const FOCUS_DOMAINS: ReadonlyArray<[RegExp, readonly string[]]> = [
   [/passport/i, ["passportindia.gov.in", "mea.gov.in"]],
-  [/licen[cs]e|\bdl\b|driving|vehicle|\brc\b/i, ["parivahan.gov.in", "sarathi.parivahan.gov.in", "morth.nic.in", "punjabtransport.org"]],
-  [/voter|epic|electoral/i, ["eci.gov.in", "voters.eci.gov.in", "ceopunjab.gov.in"]],
+  [/\bdl\b|driving|vehicle|\brc\b/i, ["parivahan.gov.in", "sarathi.parivahan.gov.in", "morth.nic.in"]],
+  [/voter|epic|electoral/i, ["eci.gov.in", "voters.eci.gov.in"]],
   [/\bpan\b|income tax/i, ["incometax.gov.in", "incometaxindia.gov.in", "protean-tinpan.com", "uidai.gov.in"]],
   [/aadhaar|aadhar/i, ["uidai.gov.in", "myaadhaar.uidai.gov.in"]],
   [/birth|death/i, ["crsorgi.gov.in", "censusindia.gov.in"]],
-  [/residen|domicile|income certificate|caste|sewa/i, ["connect.punjab.gov.in", "esewa.punjab.gov.in", "punjab.gov.in", "dgrpg.punjab.gov.in"]],
 ];
 
-export function focusDomains(task: string, city: string): string[] | undefined {
+// These are national service hints, not a city-to-jurisdiction resolver.
+// State services use the generic official search, with the user's city in the query.
+export function focusDomains(task: string): string[] | undefined {
   for (const [pattern, domains] of FOCUS_DOMAINS) {
     if (pattern.test(task)) {
-      void city;
       return [...domains];
     }
   }

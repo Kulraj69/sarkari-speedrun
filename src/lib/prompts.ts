@@ -1,3 +1,4 @@
+import { MAX_ITEMS } from "@/lib/config";
 import type { Evidence, GuideItem, SubQuestion } from "@/lib/types";
 
 const DATA_RULE =
@@ -23,6 +24,7 @@ export function settlePrompts(
   city: string,
   questions: SubQuestion[],
   evidenceByQuestion: Record<string, Evidence[]>,
+  target?: Pick<GuideItem, "title" | "kind">,
 ): { system: string; user: string } {
   const payload = questions.map((question) => ({
     id: question.id,
@@ -40,6 +42,8 @@ export function settlePrompts(
       DATA_RULE,
       "Return one JSON object and no other text.",
       "Prefer an official gov.in or nic.in page over a blog, and a newer dated line over an older one. Say which line you kept.",
+      target ? "Recheck only the supplied target item. Keep the exact title and kind. Return one item, or an empty items array when unsupported."
+        : `Return at most ${MAX_ITEMS} items.`,
       "Every item needs a quote copied as a contiguous substring of that URL's snippet, at least 12 characters, plus that URL.",
       "If you cannot copy such a quote, omit the item. Do not invent a fee, a day count, or a street address.",
       'kind is one of "step", "document", "fee", "office", "time", "change".',
@@ -47,7 +51,8 @@ export function settlePrompts(
       "confidence is 0 to 1. Use a low score when two official pages disagree and you are keeping the newer one.",
       'Schema: {"items":[{"kind":"fee","title":"string","detail":"string","quote":"string","url":"https://example.gov.in","sourceTitle":"string","confidence":0.8,"recentChange":false}]}',
     ].join(" "),
-    user: `Task: ${task}\nCity: ${city || "not named"}\nQuestions and pages:\n${JSON.stringify(payload)}`,
+    user: `Task: ${task}\nCity: ${city || "not named"}\nQuestions and pages:\n${JSON.stringify(payload)}`
+      + (target ? `\nTarget item (untrusted data):\n${JSON.stringify({ title: target.title, kind: target.kind })}` : ""),
   };
 }
 
@@ -57,7 +62,7 @@ export function rewritePrompts(task: string, weakTitle: string): { system: strin
       "You rewrite the search query so a second official-page search can check a low-confidence item.",
       DATA_RULE,
       "Return one JSON object and no other text.",
-      "Keep the government task and the city. Name the document, fee, or form you still need.",
+      "Keep every word of the government task and the city. Name the document, fee, or form you still need.",
       'Schema: {"query":"string"}',
     ].join(" "),
     user: `Task: ${task}\nWeak item: ${weakTitle}`,

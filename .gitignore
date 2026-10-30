@@ -44,3 +44,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local demo recordings and caches
+/demo/
+/demo.mp4
+__pycache__/

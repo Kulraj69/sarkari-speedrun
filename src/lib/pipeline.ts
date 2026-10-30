@@ -7,7 +7,6 @@ import {
   CONFIDENCE_RETRY_BELOW,
   FALLBACK_STATUSES,
   NANO_CHECKLIST_TEMPERATURE,
-  NANO_MODEL_LABEL,
   NANO_PLAN_MAX_TOKENS,
   NANO_PLAN_TEMPERATURE,
   NANO_REWRITE_TEMPERATURE,
@@ -17,6 +16,7 @@ import {
   PROVIDER_TAVILY,
   PROVIDER_TOKEN_FACTORY,
   REWRITE_MAX_TOKENS,
+  RUN_TIMEOUT_MS,
   TAVILY_CONCURRENCY,
   TAVILY_LABEL,
 } from "@/lib/config";
@@ -30,6 +30,7 @@ import {
   RECORDED_TRACE_DETAIL,
 } from "@/lib/copy";
 import { readEnv, resolveMode } from "@/lib/env";
+import { abortable, scopedFetch } from "@/lib/cancellation";
 import { assertDemoFixtures, fixtureTraces, matchFixture } from "@/lib/fixtures";
 import type { DemoTask } from "@/lib/fixtures";
 import { errorMessage } from "@/lib/json";
@@ -120,6 +121,16 @@ function weakest(items: readonly GuideItem[]): GuideItem | null {
     if (!picked || item.confidence < picked.confidence) picked = item;
   }
   return picked;
+}
+
+function normalizedWords(text: string): string[] {
+  return text.toLowerCase().match(/[\p{L}\p{N}\p{M}]+/gu) ?? [];
+}
+
+// A conservative lexical guard, not a semantic or jurisdiction verifier.
+function keepsScope(query: string, task: string, city: string): boolean {
+  const words = new Set(normalizedWords(query));
+  return normalizedWords(`${task} ${city}`).every((word) => words.has(word));
 }
 
 async function* playDemo(task: DemoTask, deps: PipelineDeps): AsyncGenerator<PipelineEvent> {
@@ -250,6 +261,7 @@ function modelTrace(
     title,
     detail,
     provider: PROVIDER_TOKEN_FACTORY,
+    outcome: "received",
     modelId: result.modelId,
     modelLabel: labelForModel(result.modelId, deps.env),
     latencyMs: result.latencyMs,
@@ -272,13 +284,28 @@ function settleItems(
       sample: false,
       order: startOrder + index,
     });
-    if (settled) items.push({ ...settled, id: settled.id || `s${startOrder + index}` });
+    if (settled) items.push(settled);
   });
   return items;
 }
 
+function* rejectedItems(count: number, id: string): Generator<PipelineEvent> {
+  if (count === 0) return;
+  yield { type: "trace-outcome", id, outcome: "rejected" };
+  yield { type: "warning", message: `${count} proposed item${count === 1 ? "" : "s"} failed the item or citation checks and was not added. The map may be incomplete.` };
+}
+
+function* truncatedItems(count: number, id: string): Generator<PipelineEvent> {
+  if (count === 0) return;
+  yield { type: "trace-outcome", id, outcome: "rejected" };
+  yield { type: "warning", message: `${count} additional proposed item${count === 1 ? "" : "s"} exceeded the per-response limit and was not checked. The map may be incomplete.` };
+}
+
 async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<PipelineEvent> {
   const parsedLine = parseTaskLine(text);
+  const task = parsedLine.task;
+  const city = parsedLine.city;
+  yield { type: "meta", mode: "live", sample: false, task, city, fixtureId: null };
   const planPrompt = planPrompts(text, deps.env.maxQuestions);
   const planned = await chatComplete({
     fetch: deps.fetch,
@@ -294,26 +321,29 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
     timeoutMs: NANO_TIMEOUT_MS,
     now: deps.now,
   });
-  const plan = parsePlan(planned.content, deps.env.maxQuestions);
-  const task = plan.task || parsedLine.task;
-  const city = plan.city || parsedLine.city;
-  const questions: SubQuestion[] = plan.questions.map((question, index) => ({
-    id: `q${index + 1}`,
-    text: question.text,
-  }));
-
-  yield { type: "meta", mode: "live", sample: false, task, city, fixtureId: null };
   yield {
     type: "trace",
     trace: modelTrace(
       "plan",
       "plan",
       "Plan sub-questions",
-      `${NANO_MODEL_LABEL} on ${PROVIDER_TOKEN_FACTORY}.`,
+      `${labelForModel(planned.modelId, deps.env)} on ${PROVIDER_TOKEN_FACTORY}.`,
       planned,
       deps,
     ),
   };
+  // Record response usage before application parsing, including rejected replies.
+  let plan: ReturnType<typeof parsePlan>;
+  try {
+    plan = parsePlan(planned.content, deps.env.maxQuestions);
+  } catch (error) {
+    yield { type: "trace-outcome", id: "plan", outcome: "rejected" };
+    throw error;
+  }
+  const questions: SubQuestion[] = plan.questions.map((question, index) => ({
+    id: `q${index + 1}`,
+    text: question.text,
+  }));
   yield { type: "plan", questions };
 
   if (questions.length === 0) {
@@ -333,11 +363,11 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
         query: `${task} ${city} ${question.text}`.trim(),
         maxResults: deps.env.tavilyMaxResults,
         now: deps.now,
-        includeDomains: focusDomains(task, city),
+        includeDomains: focusDomains(task),
       });
     } catch (error) {
       if (isAuth(error)) throw error;
-      return { evidence: [] as Evidence[], latencyMs: 0, failed: errorMessage(error) };
+      return { evidence: [] as Evidence[], latencyMs: 0, failed: "Evidence retrieval failed." };
     }
   });
 
@@ -347,6 +377,9 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
     const result = searches[index];
     if (!question || !result) continue;
     evidenceByQuestion[question.id] = result.evidence;
+    if (result.failed) {
+      yield { type: "warning", message: `Evidence retrieval incomplete for ${question.id}. ${result.failed}` };
+    }
     yield {
       type: "trace",
       trace: {
@@ -354,8 +387,8 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
         step: "evidence",
         title: `Official pages · ${question.id}`,
         detail: result.failed
-          ? `Tavily did not return pages (${result.failed}).`
-          : `${TAVILY_LABEL} search and extract. ${result.evidence.length} official pages.`,
+          ? `Tavily retrieval incomplete. ${result.evidence.length} official evidence entries retained. ${result.failed}`
+          : `${TAVILY_LABEL} search and extract. ${result.evidence.length} official evidence entries.`,
         provider: PROVIDER_TAVILY,
         modelId: null,
         modelLabel: TAVILY_LABEL,
@@ -370,9 +403,13 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
   }
 
   const evidence = Object.values(evidenceByQuestion).flat();
+  if (evidence.length === 0) {
+    yield { type: "checklist", checklist: checklistFromTitles([], false) };
+    yield { type: "done" };
+    return;
+  }
   const settlePrompt = settlePrompts(task, city, questions, evidenceByQuestion);
   const judged = await completeWithFallback(deps, settlePrompt.system, settlePrompt.user);
-  let items = settleItems(parseItemDrafts(judged.content), evidence, 1);
   yield {
     type: "trace",
     trace: modelTrace(
@@ -384,6 +421,16 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
       deps,
     ),
   };
+  let items: GuideItem[];
+  try {
+    const drafts = parseItemDrafts(judged.content);
+    items = settleItems(drafts.items, evidence, 1);
+    yield* truncatedItems(drafts.truncated, "settle");
+    yield* rejectedItems(drafts.items.length - items.length, "settle");
+  } catch (error) {
+    yield { type: "trace-outcome", id: "settle", outcome: "rejected" };
+    throw error;
+  }
   for (const guideItem of items) yield { type: "item", item: guideItem };
 
   const weak = weakest(items);
@@ -404,14 +451,22 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
         timeoutMs: NANO_TIMEOUT_MS,
         now: deps.now,
       });
-      const query = parseRewrite(rewritten.content, `${task} ${city} ${weak.title}`);
+      const fallbackQuery = `${task} ${city} ${weak.title}`.replace(/\s+/g, " ").trim();
+      const parsedRewrite = parseRewrite(rewritten.content, fallbackQuery);
+      const usedFallback = parsedRewrite.usedFallback || !keepsScope(parsedRewrite.query, task, city);
+      const query = usedFallback ? fallbackQuery : parsedRewrite.query;
+      if (usedFallback) {
+        yield { type: "warning", message: "Query rewrite was invalid or omitted task/city words. A deterministic task/city/title fallback was used for the recheck." };
+      }
       yield {
         type: "trace",
         trace: modelTrace(
           "rewrite",
           "rewrite",
           `Rewrite query · ${weak.id}`,
-          `Confidence ${weak.confidence.toFixed(2)} is under ${CONFIDENCE_RETRY_BELOW}. Nano rewrote the search once.`,
+          usedFallback
+            ? `${labelForModel(rewritten.modelId, deps.env)} reply was not used. The recheck used the deterministic task/city/title fallback.`
+            : `Confidence ${weak.confidence.toFixed(2)} is under ${CONFIDENCE_RETRY_BELOW}. ${labelForModel(rewritten.modelId, deps.env)} rewrote the search once.`,
           rewritten,
           deps,
         ),
@@ -422,14 +477,21 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
         query,
         maxResults: deps.env.tavilyMaxResults,
         now: deps.now,
+        includeDomains: focusDomains(task),
       });
+      if (again.failed) {
+        yield { type: "warning", message: `Retry evidence retrieval incomplete. ${again.failed}` };
+      }
+      if (again.evidence.length === 0) throw new Error("Retry returned no evidence.");
       yield {
         type: "trace",
         trace: {
           id: "evidence-retry",
           step: "evidence",
           title: "Official pages · retry",
-          detail: `${TAVILY_LABEL} search and extract. ${again.evidence.length} official pages.`,
+          detail: again.failed
+            ? `Tavily retrieval incomplete. ${again.evidence.length} official evidence entries retained.`
+            : `${TAVILY_LABEL} search and extract. ${again.evidence.length} official evidence entries.`,
           provider: PROVIDER_TAVILY,
           modelId: null,
           modelLabel: TAVILY_LABEL,
@@ -440,10 +502,8 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
         },
       };
       const retryQuestion: SubQuestion = { id: "retry", text: query };
-      const retryPrompt = settlePrompts(task, city, [retryQuestion], { retry: again.evidence });
+      const retryPrompt = settlePrompts(task, city, [retryQuestion], { retry: again.evidence }, weak);
       const rejudged = await completeWithFallback(deps, retryPrompt.system, retryPrompt.user);
-      const replacements = settleItems(parseItemDrafts(rejudged.content), again.evidence, weak.order);
-      const better = [...replacements].sort((a, b) => b.confidence - a.confidence)[0];
       yield {
         type: "trace",
         trace: modelTrace(
@@ -455,6 +515,23 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
           deps,
         ),
       };
+      let replacements: GuideItem[];
+      try {
+        const drafts = parseItemDrafts(rejudged.content);
+        replacements = settleItems(drafts.items, again.evidence, weak.order);
+        yield* truncatedItems(drafts.truncated, "settle-retry");
+        yield* rejectedItems(drafts.items.length - replacements.length, "settle-retry");
+      } catch (error) {
+        yield { type: "trace-outcome", id: "settle-retry", outcome: "rejected" };
+        throw error;
+      }
+      const matching = replacements.filter((item) => item.kind === weak.kind
+        && normalizedWords(item.title).join(" ") === normalizedWords(weak.title).join(" "));
+      if (matching.length !== replacements.length) {
+        yield { type: "trace-outcome", id: "settle-retry", outcome: "rejected" };
+        yield { type: "warning", message: "Recheck item identity differed from the original title or kind. Non-matching replacements were ignored." };
+      }
+      const better = [...matching].sort((a, b) => b.confidence - a.confidence)[0];
       if (better && better.confidence > weak.confidence) {
         const replaced = { ...better, id: weak.id, order: weak.order };
         items = items.map((item) => (item.id === weak.id ? replaced : item));
@@ -462,12 +539,14 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
       }
     } catch (error) {
       if (isAuth(error)) throw error;
+      yield { type: "warning", message: "Low-confidence recheck did not complete. The original cited items were retained." };
     }
   }
 
   const quotes = items.map((item) => item.quote);
   let checklist = checklistFromTitles(items, false);
   let checklistResult: Awaited<ReturnType<typeof chatComplete>> | null = null;
+  let checklistFallback = true;
   if (items.length > 0) {
     try {
       const checklistPrompt = checklistPrompts(task, city, items);
@@ -488,9 +567,13 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
       const parsed = parseChecklist(checklistResult.content);
       if (amountsAreCited(`${parsed.english} ${parsed.hindi}`, quotes)) {
         checklist = { ...parsed, sample: false };
+        checklistFallback = false;
+      } else {
+        yield { type: "warning", message: "Generated checklist rejected for an uncited amount. Cited titles are shown instead." };
       }
     } catch (error) {
       if (isAuth(error)) throw error;
+      yield { type: "warning", message: "Bilingual checklist generation did not complete. Cited titles are shown instead." };
     }
   }
 
@@ -501,7 +584,9 @@ async function* runLive(text: string, deps: PipelineDeps): AsyncGenerator<Pipeli
         "checklist",
         "checklist",
         "Hindi and English checklist",
-        `${labelForModel(checklistResult.modelId, deps.env)} on ${PROVIDER_TOKEN_FACTORY}.`,
+        checklistFallback
+          ? "Model reply was not used. The checklist falls back to cited titles."
+          : `${labelForModel(checklistResult.modelId, deps.env)} on ${PROVIDER_TOKEN_FACTORY}.`,
         checklistResult,
         deps,
       ),
@@ -536,19 +621,42 @@ export async function* runPipeline(
     return;
   }
 
+  const lifetime = new AbortController();
+  const signal = deps.signal ? AbortSignal.any([deps.signal, lifetime.signal]) : lifetime.signal;
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    lifetime.abort();
+  }, RUN_TIMEOUT_MS);
+  const scoped: PipelineDeps = {
+    ...deps,
+    signal,
+    fetch: scopedFetch(deps.fetch, signal),
+    sleep: (ms) => {
+      signal.throwIfAborted();
+      return abortable(deps.sleep(ms), signal);
+    },
+  };
+  const fixture = mode === "mock" ? matchFixture(trimmed) : null;
+  const iterator = mode === "live" ? runLive(trimmed, scoped)
+    : fixture ? playDemo(fixture, scoped) : runEmptyMock(trimmed, scoped);
   try {
-    if (mode === "mock") {
-      const fixture = matchFixture(trimmed);
-      if (fixture) {
-        yield* playDemo(fixture, deps);
-        return;
-      }
-      yield* runEmptyMock(trimmed, deps);
-      return;
+    while (true) {
+      signal.throwIfAborted();
+      const next = await abortable(iterator.next(), signal);
+      signal.throwIfAborted();
+      if (next.done) break;
+      yield next.value;
     }
-    yield* runLive(trimmed, deps);
   } catch (error) {
-    yield { type: "error", message: errorMessage(error) };
+    yield { type: "error", message: timedOut
+      ? "This run exceeded its time limit. Results are incomplete; try again later."
+      : signal.aborted ? "This run was cancelled. Results are incomplete." : errorMessage(error) };
+  } finally {
+    clearTimeout(timer);
+    lifetime.abort();
+    // Do not block terminal delivery on a non-cooperative injected iterator.
+    void iterator.return(undefined).catch(() => {});
   }
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { CACHED_BANNER, LIVE_BANNER, MOCK_EMPTY_BANNER } from "@/lib/copy";
-import { isPublicHttpUrl } from "@/lib/trust";
+import { isOfficialSourceUrl } from "@/lib/trust";
 import type { BoardState, GuideItem, ItemKind } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,9 +30,10 @@ interface StepMapProps {
   board: BoardState;
   onCopy: () => void;
   copied: boolean;
+  copyError: string | null;
 }
 
-export function StepMap({ board, onCopy, copied }: StepMapProps) {
+export function StepMap({ board, onCopy, copied, copyError }: StepMapProps) {
   const banner =
     board.fixtureId !== null ? CACHED_BANNER : board.mode === "mock" ? MOCK_EMPTY_BANNER : board.mode === "live" ? LIVE_BANNER : null;
   const place = [board.task, board.city].filter(Boolean).join(", ");
@@ -126,6 +127,7 @@ export function StepMap({ board, onCopy, copied }: StepMapProps) {
             <Button type="button" data-testid="copy-checklist" onClick={onCopy}>
               {copied ? "Copied" : "Copy checklist"}
             </Button>
+            {copyError ? <p role="alert" data-testid="copy-error" className="text-sm text-destructive">{copyError}</p> : null}
           </CardContent>
         </Card>
       ) : null}
@@ -165,12 +167,12 @@ function Station({ item, index }: { item: GuideItem; index: number }) {
         <blockquote className="mt-3 border-l-2 border-primary/40 pl-3 text-sm leading-relaxed">
           “{item.quote}”
         </blockquote>
-        {isPublicHttpUrl(item.url) ? (
+        {isOfficialSourceUrl(item.url) ? (
           <a className="mt-2 inline-block text-xs font-medium text-primary underline-offset-2 hover:underline" href={item.url} target="_blank" rel="noreferrer">
             {item.sourceTitle}
           </a>
         ) : (
-          <p className="mt-2 text-xs font-medium">{item.sourceTitle}</p>
+          <p className="mt-2 text-xs font-medium">Source link withheld: unsupported source URL.</p>
         )}
       </article>
     </li>

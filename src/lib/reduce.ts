@@ -14,6 +14,7 @@ export function createBoardState(): BoardState {
     items: [],
     checklist: null,
     traces: [],
+    warnings: [],
     error: null,
   };
 }
@@ -42,6 +43,9 @@ export function applyEvent(state: BoardState, event: PipelineEvent): BoardState 
         status: state.status === "idle" ? "running" : state.status,
         traces: [...state.traces, event.trace],
       };
+    case "trace-outcome":
+      return { ...state, traces: state.traces.map((trace) => trace.id === event.id
+        ? { ...trace, outcome: event.outcome } : trace) };
     case "plan":
       return { ...state, questions: event.questions };
     case "evidence":
@@ -58,6 +62,8 @@ export function applyEvent(state: BoardState, event: PipelineEvent): BoardState 
     }
     case "checklist":
       return { ...state, checklist: event.checklist };
+    case "warning":
+      return { ...state, warnings: [...state.warnings, event.message] };
     case "error":
       return { ...state, status: "error", error: event.message };
     case "done":

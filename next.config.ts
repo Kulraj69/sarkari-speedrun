@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // The dev server is bound on 0.0.0.0; browsers open it as 127.0.0.1.
+  // The README demo binds to loopback; allow either local browser hostname.
   allowedDevOrigins: ["127.0.0.1", "localhost"],
+  // Avoid a framework "Cache disabled" badge over the labelled fixture demo.
+  devIndicators: false,
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

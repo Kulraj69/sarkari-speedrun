@@ -25,7 +25,9 @@ export function RouterPanel({ board }: RouterPanelProps) {
       {board.traces.length === 0 ? (
         <Card>
           <CardContent className="py-6 text-sm text-muted-foreground">
-            After a run, this panel lists Nemotron Nano, Tavily, and Nemotron Super with tokens and latency.
+            {board.mode === "live" && board.status === "error"
+              ? "No model response was recorded before this run failed. "
+              : "After a run, this panel lists model responses and evidence steps with tokens and latency. "}
             In mock mode the times are recorded samples and the APIs are not called.
           </CardContent>
         </Card>
@@ -41,11 +43,21 @@ export function RouterPanel({ board }: RouterPanelProps) {
 
       {hasCost ? (
         <p className="text-xs text-muted-foreground">
-          List-price estimate {formatUsd(cost)}. Public Token Factory rates, not an invoice. Tavily credits are not included.
+          Observed model subtotal {formatUsd(cost)}. Public Token Factory rates, not an invoice.
         </p>
       ) : board.mode === "mock" && board.traces.length > 0 ? (
         <p className="text-xs text-muted-foreground">
           No token counts on a cached demo, because no model was called.
+        </p>
+      ) : null}
+      {board.mode === "live" && (board.traces.length > 0 || board.status === "error") ? (
+        <p className="text-xs text-muted-foreground" data-testid="cost-limitations">
+          {!hasCost ? "Model cost unknown. " : ""}
+          {board.traces.filter((trace) => trace.provider === "Nebius Token Factory" && trace.estimatedUsd === null).length === 1
+            ? "1 model response has unknown cost. "
+            : board.traces.some((trace) => trace.provider === "Nebius Token Factory" && trace.estimatedUsd === null)
+              ? "Multiple model responses have unknown cost. " : ""}
+          Unrecorded failed attempts and Tavily credits are excluded. This is not the full run cost.
         </p>
       ) : null}
     </aside>
@@ -72,6 +84,9 @@ function TraceRow({ trace }: { trace: StepTrace }) {
           {trace.estimatedUsd !== null ? ` · ${formatUsd(trace.estimatedUsd)}` : ""}
         </p>
         <p>{trace.detail}</p>
+        {trace.outcome ? <p>{trace.outcome === "rejected"
+          ? "Application rejected all or part of this response; reported usage is retained."
+          : "Response received; this does not establish a valid answer."}</p> : null}
       </CardContent>
     </Card>
   );

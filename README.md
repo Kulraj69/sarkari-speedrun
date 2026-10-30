@@ -2,9 +2,9 @@
 
 Type an Indian government task and a city — `renew passport, Patiala` — and get a step map of the cited items found: steps, documents, fees, the office or portal, processing time, and source dates or changes. Some categories may be missing.
 
-Every item on the map cites an official page and a quote. In live mode, the quote must occur in retrieved text from that URL, ignoring case and whitespace, or the item is dropped. Numeric amounts prefixed with `₹` or `Rs` in an item's title or detail must also appear in its quote. Cached demos replay hand-copied quotes without fetching the pages again.
+Every item on the map cites an official page and a quote. In live mode, the quote must occur in retrieved text from that URL, ignoring case and whitespace, or the item is dropped. Selected numeric amounts prefixed with `₹`, `Rs` or `INR` in an item's title or detail must also appear in its quote. Cached demos replay hand-copied quotes without fetching the pages again.
 
-Quote matching does not verify that a paraphrase, translation, deadline, or local rule is correct or current. Confidence is the model's estimate, not measured accuracy; a source date/change badge does not establish recency. Open the cited page before paying or travelling. See [REVIEW.md](REVIEW.md) for the judging-criteria review and remaining gaps.
+Quote matching does not verify that a paraphrase, translation, deadline, or local rule is correct or current. Confidence is the model's estimate, not measured accuracy; a source date/change badge does not establish recency. Open the cited page before paying or travelling. See [local audit mechanics](docs/local-audit.md) for current boundaries; [REVIEW.md](REVIEW.md) preserves dated earlier reviews, not a current readiness verdict.
 
 It is built for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobalaihackathon.devpost.com). Planning, conflict-settling, and the bilingual checklist are NVIDIA Nemotron models on [Nebius Token Factory](https://tokenfactory.nebius.com/). [Tavily](https://tavily.com/) is the evidence step.
 
@@ -17,6 +17,10 @@ The deployed homepage and unauthenticated GitHub repository were reachable durin
 The local audit fixes and docs below are **not deployed**. The submitted Devpost entry is reported in the project handoff, but its actual fields, track, feedback and YouTube link could not be independently inspected behind Devpost's security challenge.
 
 ## Local cached demo
+
+Use Node 20.19+, Node 22.13+, or Node 24+ on Linux. This dependency update was exercised on Node 20.19.2 and npm 11.21.1; other runtime versions and platforms have not been tested here.
+
+For the published version, start with `git clone https://github.com/Kulraj69/sarkari-speedrun.git` and `cd sarkari-speedrun`. That public checkout does not contain the local audit fixes described here. This review uses local branch `work/a2-evidence-routing`, based on `5d7f85b` plus uncommitted changes, not an available public revision. A local review ZIP can capture that source without environment files or dependencies; see [source handoff](docs/source-handoff.md). It is not an official submission package. In the supplied local source directory, run:
 
 ```bash
 npm ci
@@ -31,36 +35,40 @@ Open [http://127.0.0.1:41731](http://127.0.0.1:41731). Explicit mock mode preven
 4. Enter `renew arms licence, Jaipur` → an empty cached map, not an invented answer and not a failed live search.
 5. Open **Sample eval**, then **Score this sample** → a mock consistency score. The public eval route in this local version always uses fixtures, even on a live-configured server.
 
+Copy checklist keeps both languages and the displayed citations. Clipboard denial shows an error. For failure handling, map identity, retry and routing boundaries, see [local audit mechanics](docs/local-audit.md).
+
+Source links use a shared lexical policy in the local version: HTTP(S), a syntactically valid ASCII `.gov.in` or `.nic.in` hostname, no userinfo, and only the protocol's default port. Whitespace, control characters, backslashes and encoded hostnames are rejected rather than repaired. Rejected citation URL fields are withheld on screen and in copied source lines; card text and quotations are retained. URLs written inside prose are not scrubbed and may be autolinked by the receiving application. Accepted identifiers are retained as supplied, though browsers and providers may normalize their paths. This is not DNS, redirect, page-content or advice verification, and HTTP remains allowed. Run `npm test -- tests/source-links.test.ts` for injected-source regressions. No source link is fetched by these tests. These changes are local, not deployed.
+
+The local browser reader now waits for EOF before accepting a terminal `done` or `error` event. Missing completion, trailing events, malformed UTF-8 and malformed JSON fail visibly; failed reads cancel the body and release its lock. `npm test -- tests/stream-lifecycle.test.ts tests/event-shape.test.ts` exercises transport and event-shape cases, split Hindi text and the actual cached HTTP streams without provider calls. Every declared event variant is checked for required fields, nested types and enum values before dispatch; unknown event types are rejected. Optional fields are checked when present, and additive unknown fields are tolerated. This is structural validation, not source authenticity, URL safety, cross-event consistency or advice validation. Browser requests have a 65-second deadline including fetch; the reader separately limits received data to 2 MiB total, 256 Ki UTF-16 code units per line and 16 KiB for HTTP error bodies. Browser scheduling can delay deadlines. These are engineering limits, not a guarantee about hosted billing or network memory allocation. Task and sample-eval requests now abort when their route effects are cleaned up (including Next's retained-route navigation) or a newer request replaces them. Late results lose UI ownership; completed requests clear their deadline timers. A cancelled retained map becomes retryable instead of remaining stuck in its running state. Clipboard results from an older run are ignored. These browser behaviors do not establish hosted provider cancellation or refunded usage. The change is local, not deployed.
+
 ```bash
 npm test
-npm run eval
+RECEIPTS_MODE=mock npm run eval
 ```
 
 `RECEIPTS_MODE=mock npm run eval` prints a small consistency table against hand-copied official quotes shared with the fixtures. It is not an independent accuracy benchmark or a live Nemotron score.
 
+For the map-integrity regressions, run `npm test -- tests/map-integrity.test.ts`. This injects synthetic provider replies: duplicate IDs, rejected quotes, overflow, middle-card retries and JSON numeric overflow. It makes no live provider calls. The cached browser demo does not exercise these injected paths.
+
+For the October 29 currency checks, run `npm test -- tests/currency-guard.test.ts tests/map-integrity.test.ts`. Supported forms include decimal amounts, Indian/Western comma grouping and Devanagari digits after the recognized prefixes. Tests cover rejection of changed amounts, selected signs, ranges, space grouping, scale suffixes, malformed expressions and truncated source expressions (numeric tokens, scale words and `/-` suffixes). Selected comma-space and spaced-decimal continuations are rejected; an ordinary new sentence such as `₹200. 2 photos are required.` still works. This is a bounded lexical check, not complete money or evidence understanding: suffix-only `999 रुपये`, number words, arbitrary prose or punctuation, paraphrases, jurisdiction and freshness remain outside its guarantee. Synthetic tests exercise both checklist languages, initial items, retries and fixture validation. The recorded cached walkthrough is not a live test of those paths.
+
+The October 28 dependency update moves Vitest from 3.2.7 to 4.1.12 and removes the shadcn generator CLI. Its imported CSS is retained unchanged with its MIT notice in `src/styles/`. The baseline audit flagged six affected package entries; the fresh post-update `npm audit` reported zero. This is a dated registry result, not proof that the application is secure. Do not expose test/dev servers to untrusted networks. See [dependency verification](docs/dependency-verification.md) for commands, scope and remaining warnings.
+
 The eval CLI reads the shell environment; it does not automatically load `.env.local`. Use `RECEIPTS_MODE=mock npm run eval` for an explicit cache-only check. For live evaluation, export both API keys and `RECEIPTS_MODE=live` in the shell first.
 
-## Live results (Oct 26, 2026)
+## Live evidence still needed
 
-Historical project notes record seven live runs on Token Factory and Tavily, one each, with no manual reruns. No underlying live trace was available in the reviewed source files; these numbers are unverified historical notes, not October 28 audit measurements. The pipeline can perform an automatic low-confidence second pass.
+The October 29 local provider guard requires `finish_reason: "stop"` before using a Nemotron answer. Truncated, filtered, refused and tool-call responses are rejected, even when their text looks like valid JSON. Mixed non-text content blocks are not silently discarded. Transport/body/model-JSON parse failures use fixed error text rather than echoing provider diagnostics. `npm test -- tests/provider-boundary.test.ts` exercises these boundaries and all model stages with injected responses, not live providers. A provider omitting completion status will now fail closed; current live compatibility still needs verification.
 
-| Task | Cited items kept | Sites cited | Time |
-| --- | --- | --- | --- |
-| renew passport, Patiala | 2 | passportindia.gov.in, mea.gov.in | 19 s |
-| link PAN with Aadhaar, Ludhiana | 2 | incometax.gov.in, incometaxindia.gov.in | 9 s |
-| renew driving licence, Amritsar | 2 | parivahan.gov.in | 17 s |
-| change address on voter ID, Patiala | 1 | eci.gov.in | 12 s |
-| residence certificate, Patiala | 4 | eservices.punjab.gov.in, rcms.punjab.gov.in | 20 s |
-| apply for birth certificate, Jalandhar (new) | 4 | crsorgi.gov.in | 24 s |
-| get income certificate, Mohali (new) | 0 | none | 12 s |
+Historical build notes describe live runs, but their underlying traces were not available in this audit. Their numerical results are not reproduced here as verified evidence. The current local tests use injected provider responses; the browser walkthrough uses cached fixtures. Neither proves live sponsor use, answer accuracy or user impact.
 
-Nemotron Super proposed 20 items across these runs. 15 survived the quote check. The other 5 quoted a line that was not in the retrieved text for the cited URL, so they were dropped. When nothing survives, the map stays empty; that is what happened for the Mohali income certificate.
-
-Each run used 4,700 to 7,100 tokens, about $0.002 at Token Factory list prices. All seven together cost about $0.014.
-
-Previously recorded `npm run eval` live: the exact hand-copied gold line came back in 0 of 10 checks, and the same official site was cited in 5 of 10. Exact-line matching requires the gold URL and quote; citing the same site does not establish a correct answer. The score alone does not explain missing matches. Small sample, not a benchmark.
+Before presenting live results, preserve a redacted trace showing the actual request stages, returned evidence, surviving items and failures. Score support and jurisdiction separately from exact quote matching. Do not treat model confidence or a same-site citation as a correct answer.
 
 ## Live limits
+
+The local route reads at most 16 KiB of UTF-8 JSON and allows four seconds for upload. Oversize bodies return HTTP 413; stalled uploads return 408. Invalid JSON, disconnected uploads and tasks over 2,000 characters return 400, before consuming live allowance. The byte limit includes unused JSON fields and does not trust Content-Length.
+
+After input parsing, the pipeline has a separate 55-second deadline, including provider response-body reads. Expiry produces an incomplete-run error locally. These budgets do not guarantee terminal delivery before the host's 60-second limit: scheduler and hosting overhead are unverified. Request disconnect and response-reader cancellation abort the shared provider signal; no further provider requests start after cancellation. The pipeline deadline also applies to operator CLI runs. Successful provider latency includes JSON body reading. Tests inject stalls and disconnects without calling providers; remote billing cancellation and hosted disconnect propagation are not verified.
 
 `/api/check` allows 5 live checks per IP per hour and 200 per UTC day. Past either limit it serves the cached demos with a note; uncached tasks stay empty. Counts are kept in memory per serverless instance, so these are soft caps, not a spend guarantee. Override them with `LIVE_PER_IP_LIMIT` and `LIVE_DAILY_LIMIT`. The local `/api/eval` fix makes the public sample cache-only; live evaluation remains an explicit operator CLI action. This fix has not been deployed.
 
@@ -78,7 +86,9 @@ Token Factory exposes an OpenAI-compatible `POST /v1/chat/completions` API. A ru
 
 Override the ids with `NEBIUS_NANO_MODEL`, `NEBIUS_SUPER_MODEL`, and `NEBIUS_CHECK_FALLBACK_MODEL`.
 
-The trace panel shows the model id, prompt and completion tokens, latency, and a list-price estimate from the public catalog (Nano $0.06 / $0.24 per 1M input / output tokens, Super $0.30 / $0.90, Ultra $1 / $3). That estimate is not an invoice. Tavily credits are not included.
+The trace panel shows the model id, prompt and completion tokens, latency, and an observed model subtotal from the configured catalog rates (Nano $0.06 / $0.24 per 1M input / output tokens, Super $0.30 / $0.90, Ultra $1 / $3). Rates are not re-fetched at runtime. This is not an invoice or the full run cost: unrecorded failed attempts and Tavily credits are excluded. Responses with missing/invalid usage or unknown model prices have unknown cost, not zero. Token counts must be nonnegative safe integers.
+
+Successful text responses remain in the local trace even when the planner or checker JSON is rejected. Transport failures, rejected HTTP responses and malformed/empty provider envelopes are still not recorded individually. The trace does not prove every billable attempt was captured. Mock demos have no model usage and cannot demonstrate live accounting.
 
 The source date/change badge uses a text heuristic: a year or wording such as revision, amendment, notification, extended, or “no longer”. It does not compare source dates with today. The voter-ID demo keeps an older Election Commission FAQ visible with a conflict explanation and leads with the Form 8 PDF that voters.eci.gov.in hosts.
 
@@ -113,9 +123,13 @@ For each sub-question the server calls `POST https://api.tavily.com/search`, sta
 
 If that recency filter returns nothing, the same domains are searched again without a date window, then once with no domain list. Results whose host is not `.gov.in` or `.nic.in` are dropped either way. `POST https://api.tavily.com/extract` then pulls text from the top pages and replaces the short snippet. A 401 or 403 stops the run. A failed extract keeps the search snippet.
 
+The local extraction join accepts one nonblank body for each exact requested URL. Duplicate results (even identical ones) retain that URL's search snippet and flag incomplete extraction; unrequested results cannot replace other evidence. The extraction limit counts distinct exact URLs, not repeated search hits. Search evidence itself is not deduplicated. This does not authenticate page content or follow redirects. Run `npm test -- tests/extraction-identity.test.ts tests/extraction-pipeline.test.ts` to exercise these cases and initial/retry prompt isolation with injected responses, without provider calls. These changes are not deployed.
+
 ## Cached demos
 
 These five lines replay hand-copied quotes. They are not a live search.
+
+The fixture validator checks structure, official URL hosts and selected numeric amounts, not whether every instruction follows from its quote. The cache-support tests guard specific previously observed mistakes; they are not general semantic validation. Original source snapshots and capture dates are not included, so the excerpts do not establish current requirements.
 
 | Type this | What the cache cites |
 | --- | --- |
@@ -123,7 +137,7 @@ These five lines replay hand-copied quotes. They are not a live search.
 | `link PAN and Aadhaar, Ludhiana` | Income Tax Link Aadhaar help, including the ₹1,000 delayed-link fee and the 31 December 2025 enrolment-ID notice |
 | `renew driving licence, Amritsar` | Parivahan fee table (Rs. 200.00 renewal), Sarathi steps, Form-1A |
 | `change address on voter ID, Patiala` | Form 8 on voters.eci.gov.in, plus the older ECI FAQ kept at low confidence |
-| `Punjab residence certificate, Patiala` | Punjab personnel-department form and e-Services Punjab. The cached form does not print a rupee fee, so the map does not invent one |
+| `Punjab residence certificate, Patiala` | Punjab personnel-department form and e-Services Punjab. The cached quotes do not establish the current fee or processing time, so those categories stay absent |
 
 The cached demos omit local street addresses. Live generation is prompted to avoid unsupported addresses, but quote matching does not enforce that instruction. Dates in the cached PAN notice are the notice's dates; they are not a new extension.
 

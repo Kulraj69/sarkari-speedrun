@@ -10,6 +10,7 @@ export function formatLatency(ms: number): string {
 }
 
 export function formatUsd(value: number): string {
+  if (value === 0) return "$0.0000";
   if (value < USD_TINY) return "< $0.0001";
   if (value < USD_SMALL) return `$${value.toFixed(TINY_DIGITS)}`;
   return `$${value.toFixed(SMALL_DIGITS)}`;

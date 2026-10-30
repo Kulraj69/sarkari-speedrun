@@ -40,11 +40,8 @@ export function priceForModel(modelId: string): ModelPrice | null {
 }
 
 export function labelForModel(modelId: string, env: ReceiptsEnv): string {
-  const priced = priceForModel(modelId);
-  if (modelId === env.nanoModel) return priced?.label ?? NANO_MODEL_LABEL;
-  if (modelId === env.superModel) return priced?.label ?? SUPER_MODEL_LABEL;
-  if (modelId === env.checkFallbackModel) return priced?.label ?? ULTRA_MODEL_LABEL;
-  return priced?.label ?? modelId;
+  void env;
+  return priceForModel(modelId)?.label ?? modelId;
 }
 
 export function estimateUsd(
@@ -52,11 +49,15 @@ export function estimateUsd(
   promptTokens: number | null,
   completionTokens: number | null,
 ): number | null {
-  if (promptTokens === null || completionTokens === null) return null;
+  if (!isTokenCount(promptTokens) || !isTokenCount(completionTokens)) return null;
   const price = priceForModel(modelId);
   if (!price) return null;
   const million = 1_000_000;
   return (
     (promptTokens * price.inputPerMillionUsd + completionTokens * price.outputPerMillionUsd) / million
   );
+}
+
+export function isTokenCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }

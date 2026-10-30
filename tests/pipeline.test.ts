@@ -68,7 +68,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 function chatBody(content: string): unknown {
   return {
-    choices: [{ message: { content } }],
+    choices: [{ finish_reason: "stop", message: { content } }],
     usage: { prompt_tokens: 12, completion_tokens: 8 },
   };
 }

@@ -78,6 +78,7 @@ export interface StepTrace {
   completionTokens: number | null;
   estimatedUsd: number | null;
   questionId?: string;
+  outcome?: "received" | "rejected";
 }
 
 export interface MetaEvent {
@@ -121,6 +122,11 @@ export interface ErrorEvent {
   message: string;
 }
 
+export interface WarningEvent {
+  type: "warning";
+  message: string;
+}
+
 export interface DoneEvent {
   type: "done";
 }
@@ -128,14 +134,17 @@ export interface DoneEvent {
 export type PipelineEvent =
   | MetaEvent
   | TraceEvent
+  | { type: "trace-outcome"; id: string; outcome: "rejected" }
   | PlanEvent
   | EvidenceEvent
   | ItemEvent
   | ChecklistEvent
+  | WarningEvent
   | ErrorEvent
   | DoneEvent;
 
 export interface PipelineDeps {
+  signal?: AbortSignal;
   fetch: typeof fetch;
   env: ReceiptsEnv;
   now: () => number;
@@ -169,5 +178,6 @@ export interface BoardState {
   items: GuideItem[];
   checklist: Checklist | null;
   traces: StepTrace[];
+  warnings: string[];
   error: string | null;
 }

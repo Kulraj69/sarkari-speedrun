@@ -3,29 +3,34 @@ import { goldFound, goldSiteCited, reportFromRows } from "@/lib/eval-score";
 import type { EvalReport } from "@/lib/eval-score";
 import { resolveMode } from "@/lib/env";
 import { collectPipeline } from "@/lib/pipeline";
-import type { PipelineDeps } from "@/lib/types";
+import { applyEvent, beginRun } from "@/lib/reduce";
+import type { BoardState, PipelineDeps } from "@/lib/types";
 
 export async function scoreEval(deps: PipelineDeps): Promise<EvalReport> {
   const mode = resolveMode(deps.env);
   const prompts = [...new Set(GOLD_CHECKS.map((check) => check.prompt))];
-  const quotesByPrompt = new Map<string, { quote: string; url: string }[]>();
+  const boardsByPrompt = new Map<string, BoardState>();
 
   for (const prompt of prompts) {
     const events = await collectPipeline(prompt, deps);
-    const quotes = events
-      .filter((event) => event.type === "item")
-      .map((event) => (event.type === "item" ? { quote: event.item.quote, url: event.item.url } : null))
-      .filter((item): item is { quote: string; url: string } => item !== null);
-    quotesByPrompt.set(prompt, quotes);
+    boardsByPrompt.set(prompt, events.reduce(applyEvent, beginRun()));
   }
 
-  const rows = GOLD_CHECKS.map((check) => ({
-    id: check.id,
-    task: check.task,
-    label: check.label,
-    found: goldFound(check, quotesByPrompt.get(check.prompt) ?? []),
-    sameSite: goldSiteCited(check, quotesByPrompt.get(check.prompt) ?? []),
-  }));
+  const rows = GOLD_CHECKS.map((check) => {
+    const board = boardsByPrompt.get(check.prompt);
+    // Do not export raw provider error text into CLI output or public reports.
+    const error = board?.error ? "Pipeline failed; check not scored."
+      : board?.status !== "done" ? "Pipeline incomplete; check not scored."
+      : board.warnings.length ? "Pipeline degraded; check not scored." : null;
+    return {
+      id: check.id,
+      task: check.task,
+      label: check.label,
+      found: error ? null : goldFound(check, board?.items ?? []),
+      sameSite: error ? null : goldSiteCited(check, board?.items ?? []),
+      error,
+    };
+  });
 
   return reportFromRows(mode, rows);
 }

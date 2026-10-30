@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { errorMessage } from "@/lib/json";
+import { checklistText } from "@/lib/copy";
 import { applyEvent, beginRun, createBoardState } from "@/lib/reduce";
-import { readNdjson } from "@/lib/stream";
+import { readNdjson, STREAM_TIMEOUT_MS } from "@/lib/stream";
+import { createRequestOwner } from "@/lib/request-owner";
+import { scopedFetch } from "@/lib/cancellation";
 import type { BoardState, HealthReport } from "@/lib/types";
 import { RouterPanel } from "@/components/router-panel";
 import { StepMap } from "@/components/step-map";
@@ -33,10 +36,23 @@ export function SpeedrunApp() {
   const [healthReady, setHealthReady] = useState(false);
   const [pane, setPane] = useState<Pane>("task");
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const [requests] = useState(createRequestOwner);
+  const copyGeneration = useRef(0);
+
+  useEffect(() => () => {
+    requests.cancel();
+    copyGeneration.current += 1;
+    // Next may hide a route while retaining its state for Back navigation.
+    setBoard((current) => current.status === "running"
+      ? applyEvent(current, { type: "error", message: "The run was cancelled when you left the map." })
+      : current);
+  }, [requests]);
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/health")
+    const controller = new AbortController();
+    fetch("/api/health", { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("health failed");
         return (await response.json()) as HealthReport;
@@ -52,46 +68,62 @@ export function SpeedrunApp() {
       });
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, []);
 
   async function runTask(text: string): Promise<void> {
     const trimmed = text.trim();
     if (!trimmed) return;
+    const request = requests.start(STREAM_TIMEOUT_MS);
+    copyGeneration.current += 1;
     setCopied(false);
+    setCopyError(null);
     setDraft(trimmed);
     let latest = beginRun();
     setBoard(latest);
     if (window.matchMedia("(max-width: 1023px)").matches) setPane("map");
 
     try {
-      const response = await fetch("/api/check", {
+      const signal = request.signal;
+      const response = await scopedFetch(fetch, signal)("/api/check", {
         method: "POST",
+        signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: trimmed }),
       });
       await readNdjson(response, (event) => {
+        if (!request.isCurrent()) return;
         latest = applyEvent(latest, event);
         setBoard(latest);
-      });
-      if (latest.status === "running") {
+      }, signal);
+      if (request.isCurrent() && latest.status === "running") {
         latest = applyEvent(latest, { type: "error", message: STOPPED_EARLY });
         setBoard(latest);
       }
     } catch (error) {
-      latest = applyEvent(latest, { type: "error", message: errorMessage(error) });
-      setBoard(latest);
+      if (request.isCurrent()) {
+        latest = applyEvent(latest, { type: "error", message: errorMessage(error) });
+        setBoard(latest);
+      }
+    } finally {
+      request.finish();
     }
   }
 
   async function copyChecklist(): Promise<void> {
     if (!board.checklist) return;
-    const text = `${board.checklist.english}\n\n${board.checklist.hindi}`;
+    const text = checklistText(board);
+    const generation = ++copyGeneration.current;
+    setCopyError(null);
     try {
       await navigator.clipboard.writeText(text);
+      if (copyGeneration.current !== generation) return;
       setCopied(true);
     } catch {
+      if (copyGeneration.current !== generation) return;
       setCopied(false);
+      setCopyError("Copy failed. Select the checklist and source quotes to copy them manually.");
     }
   }
 
@@ -141,9 +173,18 @@ export function SpeedrunApp() {
           <TaskForm draft={draft} running={running} onDraft={setDraft} onRun={(text) => void runTask(text)} />
         </div>
         <div className={pane === "map" ? "block" : "hidden lg:block"}>
+          {board.warnings.length > 0 ? (
+            <div role="status" data-testid="run-warnings" className="mb-3 rounded-lg border border-border p-3 text-sm">
+              <p className="font-medium">Run degraded — check the sources</p>
+              <ul className="list-disc pl-4">
+                {board.warnings.map((warning, index) => <li key={index}>{warning}</li>)}
+              </ul>
+            </div>
+          ) : null}
           <StepMap
             board={board}
             copied={copied}
+            copyError={copyError}
             onCopy={() => {
               void copyChecklist();
             }}

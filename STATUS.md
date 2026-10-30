@@ -1,5 +1,20 @@
 # Sarkari Speedrun — status, October 28, 2026
 
+## 20:20 continuation — map integrity (local only)
+Current branch `work/a2-evidence-routing`, uncommitted; older branch/test counts below are historical. Application-owned IDs prevent duplicate model IDs hiding cards. Retry prompts preserve target title/kind and rebind only the intended card. Retrieved source titles and finite-confidence handling verified; citation/identity rejection and unchecked overflow have distinct warnings and trace outcomes. Demo startup now binds localhost.
+
+Fresh source install, 135 tests, lint/build/typecheck, cache eval10/10 and nine browser groups pass. New actual labelled cached video `demo/sarkari-cached-integrity.mp4` (34.48s) fully decodes; per-card quote/title/URL clipboard readbacks pass. Report `../hermes-reports/A2-map-integrity-rounds.md` contains two supplementary review/fix rounds. Required cheap+ missing; last review not passing/rescored, so epic remains blocked. Six npm advisories remain (including two critical development-chain entries); no dependency-security or live-provider sign-off. All publication/submission/live evidence/human feedback gates below remain.
+
+## Evening continuation — failure visibility
+Retrieval, low-confidence recheck and checklist degradation is now explicit in the map and copied text; degraded evaluation rows are not scored. Search/extraction shape failures are distinguished from empty results, missing extraction stays labelled snippet-only, and no-evidence runs skip remaining model calls. Authentication failures remain terminal. This is local only; provider tests use injected responses. Verification and current demo evidence are in the A2 report.
+
+## Afternoon continuation — supersedes affected audit counts below
+- Fixed final-map scoring: superseded item events no longer earn credit. Failed/incomplete runs are explicitly unscored and separated from completed misses; CLI returns nonzero on unscored checks.
+- Copy preserves cached/live context, both languages, all visible quotes/URLs, caution and incomplete-run notes. Clipboard denial is visible.
+- Fresh verification: 40 tests, lint, production build, typecheck; cache eval 10/10 with zero failed checks; ten browser check groups including real clipboard readback for all five fixtures and mobile denial handling.
+- New local video: `demo/sarkari-cached-provenance.mp4`, 35.28 seconds, H.264 1440×964, silent, permanent cached/no-provider label. Original recordings preserved. No upload/deploy/push/commit/paid calls.
+- Evidence: `../hermes-reports/A2-evidence/continuation-*` and `verify-continuation.py`. Remaining errors swallowed inside optional retrieval/retry paths, jurisdiction, semantics, trace accounting and distributed limits are not fixed.
+
 ## Submission and deadline
 - Handoff reports **already submitted**. The actual public entry, selected track, feedback and video link remain **unverified**: direct Devpost requests returned 403 and the browser hit Cloudflare. Do not create a duplicate entry.
 - Indexed [official rules](https://nebiusglobalaihackathon.devpost.com/rules) say October 30, 2026, 10:00 AM Pacific. Python zoneinfo confirms **October 30, 10:30 PM IST**. Recheck the actual form before acting; direct rules/schedule access was blocked.
@@ -35,4 +50,4 @@ October 26 project notes report live Nebius/Tavily runs, publication and deploym
 5. Review a final video and separately approve its public YouTube upload; then approve the exact revised Devpost fields. A local video alone does not satisfy the entry requirements.
 
 ## Remaining technical limits
-Quote presence and numeric fee checks do not validate meaning, translation, dates, addresses, jurisdiction or legal applicability. Some certificate routing is Punjab-specific and ignores the city. Live eval may count superseded item events and treats provider errors as misses. Failed fallback attempts are not fully represented in trace totals. The live limiter is in-memory per instance; slow multi-provider requests can exceed the route's 60-second duration. These are documented gaps, not fixed or measured impact claims.
+Quote presence and numeric fee checks do not validate meaning, translation, dates, addresses, jurisdiction or legal applicability. Some certificate routing is Punjab-specific and ignores the city. Eval handles final-map replacement and pipeline error/incomplete/warning events. Failed fallback attempts are not fully represented in trace totals; warnings are not complete request accounting. Invalid rewrite replies can still use a deterministic query fallback. The live limiter is in-memory per instance; slow multi-provider requests can exceed the route's 60-second duration. These remaining gaps are not fixed or measured impact claims.

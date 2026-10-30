@@ -1,5 +1,8 @@
 # Sarkari Speedrun hackathon review
 
+## Afternoon continuation
+Final-map evaluation and copied-checklist provenance are now fixed locally; the earlier open findings below are historical for those two paths. Failed/incomplete event streams are not scored; completed misses remain misses. Copied text retains both languages, task/city, cached/live context, caution and visible item quotes/URLs. Denied clipboard access shows an alert. Fresh verification: 40 tests, lint/build/typecheck, ten browser check groups, and a new labelled cached recording. See STATUS.md. Optional provider failures swallowed internally, jurisdiction, semantic/translation checks and trace/budget limits remain open.
+
 ## October 28 audit update — current findings
 
 The sections below this update preserve the October 27 review as historical context, not current verification. [STATUS.md](STATUS.md) is the current status; raw evidence is in `../hermes-reports/A2-evidence/` and the detailed audit is `../hermes-reports/A2-sarkari-speedrun.md`.

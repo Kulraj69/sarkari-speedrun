@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { errorMessage } from "@/lib/json";
+import { createRequestOwner } from "@/lib/request-owner";
+import { scopedFetch } from "@/lib/cancellation";
+import { STREAM_TIMEOUT_MS } from "@/lib/stream";
 import type { EvalReport } from "@/lib/eval-score";
 import { Button } from "@/components/ui/button";
 
@@ -9,13 +12,22 @@ export function EvalRunner() {
   const [report, setReport] = useState<EvalReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [requests] = useState(createRequestOwner);
+
+  useEffect(() => () => {
+    requests.cancel();
+    setRunning(false);
+  }, [requests]);
 
   async function run(): Promise<void> {
+    const request = requests.start(STREAM_TIMEOUT_MS);
     setRunning(true);
     setError(null);
+    setReport(null);
     try {
-      const response = await fetch("/api/eval", { method: "POST" });
+      const response = await scopedFetch(fetch, request.signal)("/api/eval", { method: "POST" });
       const payload: unknown = await response.json();
+      if (!request.isCurrent()) return;
       if (!response.ok) {
         const message =
           payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string"
@@ -27,10 +39,13 @@ export function EvalRunner() {
       }
       setReport(payload as EvalReport);
     } catch (caught) {
-      setError(errorMessage(caught));
-      setReport(null);
+      if (request.isCurrent()) {
+        setError(errorMessage(caught));
+        setReport(null);
+      }
     } finally {
-      setRunning(false);
+      if (request.isCurrent()) setRunning(false);
+      request.finish();
     }
   }
 
@@ -54,6 +69,10 @@ export function EvalRunner() {
           <p className="text-sm">
             Matched {report.agreement} of {report.total}. Mode: {report.mode}.
           </p>
+          <p className="text-sm" role="status">
+            Failed/incomplete checks: {report.failed} of {report.rows.length}; excluded from scoring.
+            {" "}Includes degraded runs with retrieval or generation warnings.
+          </p>
           <div className="overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10">
             <table className="w-full min-w-[32rem] text-left text-sm">
               <thead className="text-xs tracking-wide text-muted-foreground uppercase">
@@ -68,7 +87,7 @@ export function EvalRunner() {
                   <tr key={row.id} className="border-t border-border">
                     <td className="px-3 py-2">{row.task}</td>
                     <td className="px-3 py-2">{row.label}</td>
-                    <td className="px-3 py-2">{row.found ? "yes" : "no"}</td>
+                    <td className="px-3 py-2">{row.error || (row.found === null ? "not scored" : row.found ? "yes" : "no")}</td>
                   </tr>
                 ))}
               </tbody>

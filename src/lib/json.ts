@@ -15,7 +15,11 @@ export function extractJson(raw: string): unknown {
     if (start === -1 || end <= start) {
       throw new Error("Model did not return JSON.");
     }
-    return JSON.parse(candidate.slice(start, end + 1)) as unknown;
+    try {
+      return JSON.parse(candidate.slice(start, end + 1)) as unknown;
+    } catch {
+      throw new Error("Model did not return JSON.");
+    }
   }
 }
 

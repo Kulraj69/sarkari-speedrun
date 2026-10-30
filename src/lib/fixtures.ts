@@ -50,7 +50,6 @@ import {
   PUNJAB_ID_QUOTE,
   PUNJAB_ONLINE_QUOTE,
   PUNJAB_PORTAL_URL,
-  PUNJAB_RTS_QUOTE,
   PUNJAB_SEWA_QUOTE,
   PUNJAB_VERIFY_QUOTE,
   VOTER_FEE_QUOTE,
@@ -103,7 +102,7 @@ const VOTER_QUESTIONS: SubQuestion[] = [
 ];
 
 const PUNJAB_QUESTIONS: SubQuestion[] = [
-  { id: "q1", text: "Which documents does the Punjab residence-certificate form mark mandatory?" },
+  { id: "q1", text: "Which document copies appear in the cached Punjab residence-certificate form?" },
   { id: "q2", text: "Where does a Patiala resident submit it, online or at a Sewa Kendra?" },
 ];
 
@@ -338,7 +337,7 @@ export const DEMO_TASKS: readonly DemoTask[] = [
         order: 2,
         title: "After the grace period",
         detail:
-          "The same table lists Rs. 300.00 when the application is after the grace period, and an additional fee at the rate of Rupees One Thousand Only for each year of delay.",
+          "The same table lists Rs. 300.00 when the application is after the grace period, and an additional fee at the rate of Rupees One Thousand Only for each year or part of a year of delay.",
         quote: DL_LATE_QUOTE,
         url: DL_FEE_URL,
         sourceTitle: "Licensing fees and charges",
@@ -490,16 +489,16 @@ export const DEMO_TASKS: readonly DemoTask[] = [
     city: "Patiala",
     questions: PUNJAB_QUESTIONS,
     hindi:
-      "यह पंजाब का रेजिडेंस सर्टिफिकेट है, पटियाला के लिए। फॉर्म पर RTS Service Code 52 है। अनिवार्य कागज़: राशन कार्ड, वोटर कार्ड, आधार (फॉर्म पर Adhar लिखा है), ड्राइविंग लाइसेंस या पासपोर्ट की कॉपी; जन्म तिथि का सबूत; और सरपंच, पटवारी, विभाग प्रमुख या नगर पार्षद का सत्यापन पत्र। स्कूल प्रमाणपत्र वैकल्पिक है। आवेदन ऑनलाइन, यूज़रनेम बनाकर, या किसी सेवा केंद्र पर। इस कैश किए फॉर्म पर रुपए का शुल्क और दिनों की संख्या नहीं छपी। गली का पता नहीं जोड़ा गया। सेवा केंद्र या पोर्टल पर वर्तमान शुल्क पूछें।",
+      "इस कैश में पंजाब के रेजिडेंस सर्टिफिकेट फॉर्म की पंक्तियाँ हैं। इनमें राशन कार्ड के पहले और दूसरे पन्ने, वोटर कार्ड, आधार (फॉर्म पर Adhar लिखा है), ड्राइविंग लाइसेंस या पासपोर्ट की कॉपी; जन्म तिथि का सबूत; और सरपंच, पटवारी, विभाग प्रमुख या नगर पार्षद के सत्यापन पत्र की कॉपी लिखी है। पोर्टल की सामान्य पंक्तियाँ ऑनलाइन पंजीकरण और सेवा केंद्र का रास्ता बताती हैं; इस सर्टिफिकेट के लिए इनकी उपलब्धता जाँचें। इस कैश से वर्तमान शुल्क या लगने वाला समय पता नहीं चलता। पटियाला का गली का पता भी इसमें नहीं है। आवेदन या भुगतान से पहले पोर्टल या सेवा केंद्र से वर्तमान शर्तें जाँचें।",
     english:
-      "This is Punjab's residence certificate, for a Patiala address. The personnel-department form prints RTS Service Code: 52. Mandatory copies on that form: ration card, voter card, Aadhaar (printed as Adhar), driving licence, or passport; proof of date of birth; and a verification certificate from the sarpanch, patwari, head of department, or municipal councillor. A school certificate is optional. Apply online after registering, or at any Sewa Kendra. The cached form does not print a rupee fee or a day count, and this map does not invent one or a street address. Ask the Sewa Kendra or the portal for the current fee.",
+      "The cached Punjab residence-certificate form lists copies of the first and second pages of a ration card, voter card, Aadhaar (printed as Adhar), driving licence, or passport; proof of date of birth; and a verification certificate from a sarpanch, patwari, head of department, or municipal councillor. The general portal instructions describe online registration and Sewa Kendras; confirm that these routes support this certificate. This cache does not establish the current fee or processing time. It also has no Patiala street address. Check the current requirements with the portal or Sewa Kendra before applying or paying.",
     items: [
       item({
         id: "id",
         kind: "document",
         order: 1,
-        title: "Photo identity, as the form spells it",
-        detail: "The form asks for one of these copies. It prints Adhar, not Aadhaar.",
+        title: "Identity-document copies listed in the cached form",
+        detail: "The cached line lists these identity copies separated by slashes. It prints Adhar, not Aadhaar.",
         quote: PUNJAB_ID_QUOTE,
         url: PUNJAB_FORM_URL,
         sourceTitle: "Punjab residence certificate form",
@@ -523,7 +522,7 @@ export const DEMO_TASKS: readonly DemoTask[] = [
         kind: "document",
         order: 3,
         title: "Verification from sarpanch, patwari, HOD, or councillor",
-        detail: "The form asks for the certificate number and treats this copy as required.",
+        detail: "The cached line lists a copy of this verification certificate. Check the current form for its conditions.",
         quote: PUNJAB_VERIFY_QUOTE,
         url: PUNJAB_FORM_URL,
         sourceTitle: "Punjab residence certificate form",
@@ -531,35 +530,11 @@ export const DEMO_TASKS: readonly DemoTask[] = [
         recentChange: false,
       }),
       item({
-        id: "rts",
-        kind: "time",
-        order: 4,
-        title: "Right to Service code, not a day count",
-        detail: "The form prints a service code. It does not print how many days Patiala will take. No day count is filled in here.",
-        quote: PUNJAB_RTS_QUOTE,
-        url: PUNJAB_FORM_URL,
-        sourceTitle: "Punjab residence certificate form",
-        confidence: 0.8,
-        recentChange: false,
-      }),
-      item({
-        id: "fee",
-        kind: "fee",
-        order: 5,
-        title: "No rupee fee on the cached form",
-        detail: "The residence form and the state forms index do not print a fee in the lines cached here. Ask the Sewa Kendra before you pay.",
-        quote: PUNJAB_RTS_QUOTE,
-        url: PUNJAB_FORM_URL,
-        sourceTitle: "Punjab residence certificate form",
-        confidence: 0.64,
-        recentChange: false,
-      }),
-      item({
         id: "online",
         kind: "step",
-        order: 6,
-        title: "Register, then open the form",
-        detail: "e-Services Punjab describes the online path. It is not a Patiala-only site.",
+        order: 4,
+        title: "General portal route: online registration",
+        detail: "This cached portal line does not name the residence certificate. Confirm that this service is available online.",
         quote: PUNJAB_ONLINE_QUOTE,
         url: PUNJAB_PORTAL_URL,
         sourceTitle: "e-Services Punjab",
@@ -569,9 +544,9 @@ export const DEMO_TASKS: readonly DemoTask[] = [
       item({
         id: "sewa",
         kind: "office",
-        order: 7,
-        title: "Any Sewa Kendra",
-        detail: "The portal says you can apply at a Sewa Kendra. A Patiala street address is not in the cached page.",
+        order: 5,
+        title: "General portal route: Sewa Kendra",
+        detail: "This cached portal line does not name the residence certificate. Confirm service availability; no Patiala street address is cached.",
         quote: PUNJAB_SEWA_QUOTE,
         url: PUNJAB_PORTAL_URL,
         sourceTitle: "e-Services Punjab",

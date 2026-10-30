@@ -12,7 +12,7 @@ import {
 } from "@/lib/config";
 import { isRecord } from "@/lib/json";
 import { ProviderError } from "@/lib/nebius";
-import { blendEvidenceScore, isOfficialHost, isPublicHttpUrl } from "@/lib/trust";
+import { blendEvidenceScore, isOfficialSourceUrl } from "@/lib/trust";
 import type { Evidence } from "@/lib/types";
 
 const SEARCH_URL = "https://api.tavily.com/search";
@@ -104,12 +104,10 @@ export async function searchTavily(request: TavilyRequest): Promise<TavilySearch
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(TAVILY_TIMEOUT_MS),
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "request failed";
-    throw new ProviderError("Tavily", 0, `Tavily search failed (${message}).`);
+  } catch {
+    throw new ProviderError("Tavily", 0, "Tavily search failed.");
   }
 
-  const latencyMs = Math.max(0, request.now() - started);
   if (!response.ok) {
     if (response.status === HTTP_STATUS.unauthorized || response.status === HTTP_STATUS.forbidden) {
       throw new ProviderError(
@@ -122,12 +120,14 @@ export async function searchTavily(request: TavilyRequest): Promise<TavilySearch
   }
 
   const payload: unknown = await response.json();
-  const results = isRecord(payload) && Array.isArray(payload.results) ? payload.results : [];
+  if (!isRecord(payload) || !Array.isArray(payload.results)) {
+    throw new ProviderError("Tavily", 0, "Tavily search returned an invalid result list.");
+  }
+  const results = payload.results;
   const evidence: Evidence[] = [];
 
   for (const item of results) {
-    if (!isRecord(item) || typeof item.url !== "string" || !isPublicHttpUrl(item.url)) continue;
-    if (!isOfficialHost(item.url)) continue;
+    if (!isRecord(item) || typeof item.url !== "string" || !isOfficialSourceUrl(item.url)) continue;
     if (isOffTargetHost(item.url)) continue;
     const title = typeof item.title === "string" && item.title.trim() ? item.title.trim() : item.url;
     const snippet =
@@ -146,7 +146,7 @@ export async function searchTavily(request: TavilyRequest): Promise<TavilySearch
   }
 
   evidence.sort((a, b) => b.score - a.score);
-  return { evidence, latencyMs };
+  return { evidence, latencyMs: Math.max(0, request.now() - started) };
 }
 
 interface ExtractPage {
@@ -168,7 +168,6 @@ async function extractTavily(
     body: JSON.stringify({ urls: [...urls] }),
     signal: AbortSignal.timeout(TAVILY_EXTRACT_TIMEOUT_MS),
   });
-  const latencyMs = Math.max(0, request.now() - started);
   if (!response.ok) {
     if (response.status === HTTP_STATUS.unauthorized || response.status === HTTP_STATUS.forbidden) {
       throw new ProviderError(
@@ -180,15 +179,25 @@ async function extractTavily(
     throw new ProviderError("Tavily", response.status, `Tavily extract returned ${response.status}.`);
   }
   const payload: unknown = await response.json();
-  const results = isRecord(payload) && Array.isArray(payload.results) ? payload.results : [];
+  if (!isRecord(payload) || !Array.isArray(payload.results)) {
+    throw new ProviderError("Tavily", 0, "Tavily extraction returned an invalid result list.");
+  }
+  const results = payload.results;
+  const requested = new Set(urls);
+  const counts = new Map<string, number>();
+  for (const item of results) {
+    if (!isRecord(item) || typeof item.url !== "string" || !requested.has(item.url)) continue;
+    counts.set(item.url, (counts.get(item.url) ?? 0) + 1);
+  }
   const pages: ExtractPage[] = [];
   for (const item of results) {
-    if (!isRecord(item) || typeof item.url !== "string") continue;
+    // Count before checking the body: a blank duplicate is still ambiguous.
+    if (!isRecord(item) || typeof item.url !== "string" || counts.get(item.url) !== 1) continue;
     const raw = typeof item.raw_content === "string" ? item.raw_content : "";
     if (!raw.trim()) continue;
     pages.push({ url: item.url, raw: bestWindow(raw, request.query, EXTRACT_SNIPPET_CHARS) });
   }
-  return { pages, latencyMs };
+  return { pages, latencyMs: Math.max(0, request.now() - started) };
 }
 
 export interface GatheredEvidence {
@@ -198,45 +207,46 @@ export interface GatheredEvidence {
 }
 
 export async function gatherOfficialEvidence(request: TavilyRequest): Promise<GatheredEvidence> {
-  let latencyMs = 0;
+  const started = request.now();
+  const elapsed = () => Math.max(0, request.now() - started);
   const domains = request.includeDomains ?? OFFICIAL_INCLUDE_DOMAINS;
 
   let evidence: Evidence[] = [];
   try {
     const recent = await searchTavily({ ...request, includeDomains: domains, timeRange: TAVILY_TIME_RANGE });
-    latencyMs += recent.latencyMs;
     evidence = recent.evidence;
     if (evidence.length < MIN_OFFICIAL_HITS) {
       const openDated = await searchTavily({ ...request, includeDomains: domains, timeRange: null });
-      latencyMs += openDated.latencyMs;
       evidence = openDated.evidence;
     }
     if (evidence.length < MIN_OFFICIAL_HITS) {
       const wider = await searchTavily({ ...request, includeDomains: [], timeRange: null });
-      latencyMs += wider.latencyMs;
       evidence = wider.evidence;
     }
   } catch (error) {
     if (isAuthStatus(error)) throw error;
-    const message = error instanceof Error ? error.message : "search failed";
-    return { evidence: [], latencyMs, failed: message };
+    return { evidence, latencyMs: elapsed(), failed: "Search did not complete; any earlier snippets were retained." };
   }
 
-  const urls = evidence.slice(0, EXTRACT_TOP_URLS).map((item) => item.url);
-  if (urls.length === 0) return { evidence, latencyMs, failed: null };
+  const urls = [...new Set(evidence.map((item) => item.url))].slice(0, EXTRACT_TOP_URLS);
+  if (urls.length === 0) return { evidence, latencyMs: elapsed(), failed: null };
 
+  let failed: string | null = null;
   try {
     const extracted = await extractTavily(request, urls);
-    latencyMs += extracted.latencyMs;
+    if (urls.some((url) => !extracted.pages.some((page) => page.url === url))) {
+      failed = "Extraction incomplete; search snippets were retained for missing pages.";
+    }
     evidence = evidence.map((item) => {
       const page = extracted.pages.find((candidate) => candidate.url === item.url);
       return page ? { ...item, snippet: page.raw } : item;
     });
   } catch (error) {
     if (isAuthStatus(error)) throw error;
+    failed = "Extraction did not complete; search snippets were retained.";
   }
 
-  return { evidence, latencyMs, failed: null };
+  return { evidence, latencyMs: elapsed(), failed };
 }
 
 export const TAVILY_SEARCH_ENDPOINT = SEARCH_URL;

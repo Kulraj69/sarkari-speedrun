@@ -1,6 +1,6 @@
 # Sarkari Speedrun: Devpost draft
 
-**Local working draft, not submitted by this audit. Kulraj must review and write the final description in his own words.** The handoff reports an existing submission, but its fields could not be inspected on October 28 because Devpost returned a security challenge. Do not assume this draft matches that entry.
+**Local working draft, not submitted by this audit. Kulraj must review and write the final description in his own words.** The handoff reports an existing submission, but its fields could not be inspected on October 28 because Devpost returned a security challenge. Do not assume this draft matches that entry. The concise proposed form text and unresolved fields are in `../hermes-reports/submit-ready/sarkari-speedrun.md`; this longer document is background, not an instruction to overwrite the entry.
 
 **Tagline:** Type a government task and a city. Get the steps, each one quoted from an official page.
 
@@ -18,7 +18,7 @@ So we wanted the opposite: an answer where every line can be checked against the
 
 You type something like "renew driving licence, Amritsar". Sarkari Speedrun returns a step map of the cited items found: steps, documents, fees, the office or portal, processing time, and source dates or changes. The map can be incomplete or empty.
 
-Every item links to an official page and includes a quote. In live mode, quotes absent from the retrieved text for that URL are dropped, as are items whose numeric `₹` or `Rs` amounts are absent from their quote. Nano drafts a checklist in Hindi and English from the surviving items. Cached demos replay hand-copied quotes without a live search.
+Every item links to an official page and includes a quote. In live mode, quotes absent from the retrieved text for that URL are dropped, as are items whose recognized numeric amounts are absent from their quote. The local guard recognizes `₹`, `Rs` and `INR` prefixes, not every way to write money or every unsupported claim. These local fixes are not deployed. Nano drafts a checklist in Hindi and English from the surviving items. Cached demos replay hand-copied quotes without a live search.
 
 A matching quote does not prove the advice is current, applies to the user's city, or has been paraphrased or translated correctly. The confidence score is a model estimate, and the source date/change badge does not verify recency.
 
@@ -27,32 +27,28 @@ The rule we built around: an empty answer is better than an invented one.
 ## How we built it
 
 - Nemotron 3 Nano on Nebius Token Factory breaks the task into sub-questions: steps, documents, fees, where to go, time, recent changes.
-- Tavily searches service-specific domains first, for example parivahan.gov.in for a licence or eci.gov.in for voter ID. If no official results survive, it removes the date filter, then widens the search; only gov.in or nic.in hosts survive. A host-name filter removes common embassy and court results. From extracted pages we keep a relevant window of up to 1,600 characters; failed extracts retain search snippets.
+- Tavily searches service-specific domains first, for example parivahan.gov.in for driving licences or eci.gov.in for voter ID. If no official results survive, it removes the date filter, then widens the search; only gov.in or nic.in hosts survive. A host-name filter removes common embassy and court results. From extracted pages we keep a relevant window of up to 1,600 characters; failed extracts retain search snippets.
 - Nemotron 3 Super reads that evidence and proposes items. Each item has to carry a quote. Code checks that it occurs in retrieved text from the cited URL, ignoring case and whitespace.
 - Nano writes the bilingual checklist from the surviving lines only.
-- The trace panel shows each model call, its tokens, and its latency.
+- The trace panel shows successful model replies, their reported tokens, and their latency. Failed attempts are not fully accounted for; this is not a billing ledger.
 
 It is a Next.js app deployed on Vercel. The main check endpoint has soft limits per IP and per day; after either limit it serves cached demos with a note, or an empty map for uncached tasks. A local, not-yet-deployed fix makes the public eval endpoint cache-only. Authorized live evaluation remains available through the CLI.
 
-## Results
+## Verification boundary
 
-The project notes record seven tasks run live on Oct 26, 2026, once each without manual reruns. No raw trace supporting these historical numbers was available in the reviewed source files. Kulraj must verify the original evidence before putting them in the final entry. They were not re-measured during this audit; the pipeline can automatically recheck a low-confidence item.
+Local tests exercise quote rejection, routing, request limits, failure handling and map identity with synthetic provider responses. Browser tests exercise the cached maps, bilingual copy and an empty unsupported task. The sample evaluation checks fixture consistency, not live accuracy.
 
-- 6 of 7 returned cited items: passport (Patiala), PAN–Aadhaar link (Ludhiana), driving licence (Amritsar), voter ID address change (Patiala), residence certificate (Patiala), birth certificate (Jalandhar).
-- The seventh, an income certificate in Mohali, came back empty. Nothing survived the quote check, so we showed nothing.
-- Across these runs Super proposed 20 items. The quote check rejected 5 because their quotes were absent from the retrieved text for the cited URL. That does not establish the correctness of the remaining items.
-- Runs took 9 to 24 seconds.
-- On 10 hand-labelled quote checks across five tasks, the live system cited the same official site we had picked by hand in 5 of 10 cases. It matched the gold quote at the gold URL in 0 of 10. Neither metric measures answer correctness, and the scores alone do not explain missing matches. That is a small sample, not a benchmark.
+Historical live figures are not included in this proposed entry. Their underlying traces have not been verified. Current live sponsor calls, the submitted fields and the public video still need verification before the entry can be marked ready.
 
 ## Challenges
 
-- Nemotron 3 thinks by default. Super used its whole token budget on reasoning and returned nothing. Turning thinking off for the settle step fixed it.
-- Early searches returned embassy pages and city homepages. Restricting each task to its own official domain mattered more than any prompt change.
-- The first 700 characters of a government page are usually navigation, so we pick the most relevant section of the page instead.
+An injected model response reused the same ID for two different cited items. The UI treated the second as a replacement and hid the first. IDs now come from the application. The retry keeps the original card's identity and position; dropped proposals and response-limit overflow leave a visible warning. These are local synthetic-response tests, not new live sponsor results.
+
+Local October 28 fixes, verified with injected provider responses rather than new live calls: the planner could replace the user's city; search hints favoured Punjab for unrelated cities; an invalid rewrite silently fell back while its trace credited the model. The local version preserves input task/city, removes state-specific defaults, and labels rewrite fallbacks. Retry guards check task/city words and item title/kind, not semantic correctness. These changes are not deployed.
 
 ## What we learned
 
-The quote check is the product's core constraint. In the recorded seven-run sample, it dropped 5 of Super's 20 proposed items. The next accuracy question is whether each surviving quote supports the advice and applies to the user's circumstances.
+The quote check is the product's core constraint, but matching text is not enough. The next accuracy question is whether each surviving quote supports the advice and applies to the user's circumstances.
 
 ## Feedback on Nebius and NVIDIA tools
 

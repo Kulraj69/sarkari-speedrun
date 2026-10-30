@@ -1,5 +1,6 @@
 import { HTTP_STATUS } from "@/lib/config";
 import { isRecord } from "@/lib/json";
+import { isTokenCount } from "@/lib/models";
 
 export class ProviderError extends Error {
   readonly status: number;
@@ -46,15 +47,23 @@ function readContent(payload: unknown): string {
   if (!isRecord(choice) || !isRecord(choice.message)) {
     throw new ProviderError("Nebius Token Factory", 0, "Nemotron returned an empty message.");
   }
-  const content = choice.message.content;
+  if (choice.finish_reason !== "stop") {
+    throw new ProviderError("Nebius Token Factory", 0, "Nemotron did not return a completed answer.");
+  }
+  const message = choice.message;
+  if ((message.role !== undefined && message.role !== "assistant") ||
+      (message.refusal !== undefined && message.refusal !== null && message.refusal !== "") ||
+      (message.tool_calls !== undefined && message.tool_calls !== null &&
+        (!Array.isArray(message.tool_calls) || message.tool_calls.length > 0)) ||
+      (message.function_call !== undefined && message.function_call !== null)) {
+    throw new ProviderError("Nebius Token Factory", 0, "Nemotron returned a refusal or a non-answer message.");
+  }
+  const content = message.content;
   if (typeof content === "string" && content.trim()) return content;
-  if (Array.isArray(content)) {
+  if (Array.isArray(content) && content.every((part) =>
+    isRecord(part) && part.type === "text" && typeof part.text === "string")) {
     const text = content
-      .map((part) => {
-        if (typeof part === "string") return part;
-        if (isRecord(part) && typeof part.text === "string") return part.text;
-        return "";
-      })
+      .map((part) => part.text)
       .join("")
       .trim();
     if (text) return text;
@@ -69,8 +78,8 @@ function readUsage(payload: unknown): { prompt: number | null; completion: numbe
   const prompt = payload.usage.prompt_tokens;
   const completion = payload.usage.completion_tokens;
   return {
-    prompt: typeof prompt === "number" ? prompt : null,
-    completion: typeof completion === "number" ? completion : null,
+    prompt: isTokenCount(prompt) ? prompt : null,
+    completion: isTokenCount(completion) ? completion : null,
   };
 }
 
@@ -96,16 +105,14 @@ export async function chatComplete(request: ChatRequest): Promise<ChatResult> {
       }),
       signal: AbortSignal.timeout(request.timeoutMs),
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "request failed";
+  } catch {
     throw new ProviderError(
       "Nebius Token Factory",
       0,
-      `Nemotron request failed before a verdict (${message}).`,
+      "Nemotron request failed before a verdict.",
     );
   }
 
-  const latencyMs = Math.max(0, request.now() - started);
   if (!response.ok) {
     if (response.status === HTTP_STATUS.unauthorized || response.status === HTTP_STATUS.forbidden) {
       throw new ProviderError(
@@ -121,7 +128,13 @@ export async function chatComplete(request: ChatRequest): Promise<ChatResult> {
     );
   }
 
-  const payload: unknown = await response.json();
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new ProviderError("Nebius Token Factory", 0, "Nemotron response body could not be read as JSON.");
+  }
+  const latencyMs = Math.max(0, request.now() - started);
   const usage = readUsage(payload);
   return {
     content: readContent(payload),

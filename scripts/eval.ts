@@ -8,6 +8,7 @@ async function main(): Promise<void> {
   deps.env = readEnv(process.env);
   const report = await scoreEval(deps);
   process.stdout.write(`${formatAccuracyTable(report)}\n`);
+  if (report.failed > 0) process.exitCode = 1;
 }
 
 main().catch((error: unknown) => {
