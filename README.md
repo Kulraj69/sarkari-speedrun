@@ -14,13 +14,13 @@ It is built for the [Nebius x NVIDIA Global AI Hackathon](https://nebiusglobalai
 
 The deployed homepage and unauthenticated GitHub repository were reachable during a read-only audit. GitHub detects the public [MIT licence](LICENSE). No live task was sent to the deployment or paid provider. Provider configuration and current live model availability were not inspected.
 
-The local audit fixes and docs below are **not deployed**. The submitted Devpost entry is reported in the project handoff, but its actual fields, track, feedback and YouTube link could not be independently inspected behind Devpost's security challenge.
+The audit fixes and docs below were pushed to `master` and deployed to the live demo on October 30, 2026 (commit `bf90a4d`); the deployed `/api/check` enforces the 16 KiB request-body limit described here. The submitted Devpost entry's own fields, track, feedback and YouTube link are managed separately in Devpost.
 
 ## Local cached demo
 
 Use Node 20.19+, Node 22.13+, or Node 24+ on Linux. This dependency update was exercised on Node 20.19.2 and npm 11.21.1; other runtime versions and platforms have not been tested here.
 
-For the published version, start with `git clone https://github.com/Kulraj69/sarkari-speedrun.git` and `cd sarkari-speedrun`. That public checkout does not contain the local audit fixes described here. This review uses local branch `work/a2-evidence-routing`, based on `5d7f85b` plus uncommitted changes, not an available public revision. A local review ZIP can capture that source without environment files or dependencies; see [source handoff](docs/source-handoff.md). It is not an official submission package. In the supplied local source directory, run:
+Clone `https://github.com/Kulraj69/sarkari-speedrun.git` (`master`) and `cd sarkari-speedrun`; it includes the fixes described here. A local review ZIP can capture source without environment files or dependencies; see [source handoff](docs/source-handoff.md). In the source directory, run:
 
 ```bash
 npm ci

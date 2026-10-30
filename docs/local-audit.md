@@ -1,6 +1,6 @@
 # Local audit mechanics — October 28, 2026
 
-These changes are local, not deployed. Synthetic provider tests and cached browser checks are not live sponsor evidence.
+These changes were pushed and deployed on October 30, 2026. Synthetic provider tests and cached browser checks are not live sponsor evidence.
 
 October29 extraction identity follow-up: only an exact requested URL with one nonblank result can replace a snippet. Duplicate results, including blank or identical duplicates, leave the search snippet and an incomplete-extraction warning. Unrequested extraction results are ignored. Both initial retrieval and retry use the same gather function. This is an identity join check, not source authentication, freshness or semantic verification.
 
