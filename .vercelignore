@@ -1,0 +1,5 @@
+demo/
+demo.mp4
+node_modules
+.next
+__pycache__
